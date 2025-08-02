@@ -1,0 +1,71 @@
+# Qt Creator files
+*.user
+*.user.*
+*.autosave
+.qtcreator/
+
+# Build directories
+build/
+dist/
+*.spec
+
+# Python cache and virtualenv
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+venv/
+env/
+.venv/
+
+# PyInstaller temp files
+*.log
+*.toc
+*.manifest
+*.dll
+*.so
+*.dylib
+
+# Qt/PySide6 generated files
+ui_*.py
+*.ui.bak
+*.qrc.bak
+*.qm
+*.moc
+*.obj
+*.pdb
+
+# IDE specific
+.idea/
+.vscode/
+*.code-workspace
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Python packaging
+*.egg-info/
+*.egg
+*.wheel
+
+# Logs and databases
+*.log
+*.sqlite
+*.db
+
+# PyInstaller output (single executable)
+*.exe
+*.app
+*.bin
+
+# Local settings
+local_settings.py
+.env
+secrets.ini
+
+# Debug symbols
+*.debug
+
+#patch
+data/patch

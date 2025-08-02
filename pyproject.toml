@@ -1,0 +1,9 @@
+[project]
+name = "Deltarune patcher Cozy Inn"
+
+[tool.pyside6-project]
+files = ["copy_files.py", "form.ui", "mainwindow.py", "resources.qrc", "ui_form.py"]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pywin32 = "^306"
