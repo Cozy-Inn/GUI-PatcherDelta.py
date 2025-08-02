@@ -530,7 +530,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>3</number>
+     <number>4</number>
     </property>
     <widget class="QWidget" name="intro">
      <widget class="QPushButton" name="nextBtn_intro">
@@ -558,8 +558,8 @@
      <widget class="QLabel" name="version">
       <property name="geometry">
        <rect>
-        <x>180</x>
-        <y>286</y>
+        <x>184</x>
+        <y>283</y>
         <width>341</width>
         <height>31</height>
        </rect>
@@ -595,8 +595,8 @@
      <widget class="QLabel" name="version_label">
       <property name="geometry">
        <rect>
-        <x>180</x>
-        <y>266</y>
+        <x>184</x>
+        <y>263</y>
         <width>151</width>
         <height>31</height>
        </rect>
@@ -629,8 +629,8 @@
      <widget class="QLabel" name="next_label_intro">
       <property name="geometry">
        <rect>
-        <x>180</x>
-        <y>310</y>
+        <x>184</x>
+        <y>307</y>
         <width>311</width>
         <height>41</height>
        </rect>
@@ -650,8 +650,8 @@
      <widget class="QLabel" name="title_intro">
       <property name="geometry">
        <rect>
-        <x>180</x>
-        <y>10</y>
+        <x>184</x>
+        <y>7</y>
         <width>341</width>
         <height>91</height>
        </rect>
@@ -690,7 +690,7 @@
      <widget class="QLabel" name="issues">
       <property name="geometry">
        <rect>
-        <x>180</x>
+        <x>184</x>
         <y>163</y>
         <width>341</width>
         <height>51</height>
@@ -736,8 +736,8 @@
      <widget class="QLabel" name="subtitle_intro">
       <property name="geometry">
        <rect>
-        <x>180</x>
-        <y>102</y>
+        <x>184</x>
+        <y>99</y>
         <width>341</width>
         <height>51</height>
        </rect>
@@ -784,8 +784,8 @@
      <widget class="QLabel" name="telegram">
       <property name="geometry">
        <rect>
-        <x>180</x>
-        <y>290</y>
+        <x>184</x>
+        <y>287</y>
         <width>331</width>
         <height>31</height>
        </rect>
@@ -808,8 +808,8 @@
      <widget class="QLabel" name="title_success">
       <property name="geometry">
        <rect>
-        <x>180</x>
-        <y>10</y>
+        <x>184</x>
+        <y>7</y>
         <width>341</width>
         <height>91</height>
        </rect>
@@ -870,8 +870,8 @@
      <widget class="QLabel" name="subtitle_success">
       <property name="geometry">
        <rect>
-        <x>180</x>
-        <y>101</y>
+        <x>184</x>
+        <y>98</y>
         <width>341</width>
         <height>51</height>
        </rect>
@@ -900,8 +900,8 @@
      <widget class="QLabel" name="end_label_success">
       <property name="geometry">
        <rect>
-        <x>180</x>
-        <y>310</y>
+        <x>184</x>
+        <y>307</y>
         <width>351</width>
         <height>41</height>
        </rect>
@@ -971,8 +971,8 @@
      <widget class="QLabel" name="title_fail">
       <property name="geometry">
        <rect>
-        <x>180</x>
-        <y>10</y>
+        <x>184</x>
+        <y>7</y>
         <width>341</width>
         <height>91</height>
        </rect>
@@ -1011,8 +1011,8 @@
      <widget class="QLabel" name="end_label_fail">
       <property name="geometry">
        <rect>
-        <x>180</x>
-        <y>310</y>
+        <x>184</x>
+        <y>307</y>
         <width>351</width>
         <height>41</height>
        </rect>
@@ -1051,8 +1051,8 @@
      <widget class="QLabel" name="issues_fail">
       <property name="geometry">
        <rect>
-        <x>180</x>
-        <y>92</y>
+        <x>184</x>
+        <y>89</y>
         <width>341</width>
         <height>51</height>
        </rect>
@@ -1084,7 +1084,7 @@
      <widget class="QLabel" name="error_label">
       <property name="geometry">
        <rect>
-        <x>180</x>
+        <x>184</x>
         <y>150</y>
         <width>151</width>
         <height>31</height>
@@ -1105,7 +1105,7 @@
      <widget class="QLabel" name="error">
       <property name="geometry">
        <rect>
-        <x>180</x>
+        <x>184</x>
         <y>180</y>
         <width>331</width>
         <height>121</height>
@@ -1432,7 +1432,7 @@
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>277</y>
+        <y>275</y>
         <width>131</width>
         <height>21</height>
        </rect>
@@ -1450,7 +1450,7 @@
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>296</y>
+        <y>294</y>
         <width>131</width>
         <height>21</height>
        </rect>
@@ -1468,7 +1468,7 @@
       <property name="geometry">
        <rect>
         <x>150</x>
-        <y>277</y>
+        <y>275</y>
         <width>341</width>
         <height>21</height>
        </rect>
@@ -1486,7 +1486,7 @@
       <property name="geometry">
        <rect>
         <x>150</x>
-        <y>296</y>
+        <y>294</y>
         <width>341</width>
         <height>21</height>
        </rect>
@@ -1611,7 +1611,7 @@
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>100</y>
+        <y>113</y>
         <width>491</width>
         <height>23</height>
        </rect>
@@ -1627,7 +1627,7 @@
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>80</y>
+        <y>93</y>
         <width>341</width>
         <height>16</height>
        </rect>
@@ -1722,7 +1722,7 @@
       <property name="geometry">
        <rect>
         <x>268</x>
-        <y>80</y>
+        <y>93</y>
         <width>241</width>
         <height>20</height>
        </rect>
@@ -1732,6 +1732,31 @@
       </property>
       <property name="alignment">
        <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="Btn_details">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>144</y>
+        <width>80</width>
+        <height>24</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Детали</string>
+      </property>
+      <property name="checkable">
+       <bool>false</bool>
+      </property>
+      <property name="default">
+       <bool>false</bool>
+      </property>
+      <property name="flat">
+       <bool>false</bool>
       </property>
      </widget>
     </widget>
@@ -1842,7 +1867,7 @@
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>100</y>
+        <y>93</y>
         <width>491</width>
         <height>61</height>
        </rect>
@@ -1942,7 +1967,7 @@
       <property name="geometry">
        <rect>
         <x>30</x>
-        <y>190</y>
+        <y>180</y>
         <width>471</width>
         <height>41</height>
        </rect>
@@ -1993,7 +2018,7 @@
       <property name="geometry">
        <rect>
         <x>40</x>
-        <y>180</y>
+        <y>170</y>
         <width>100</width>
         <height>16</height>
        </rect>
@@ -2009,7 +2034,7 @@
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>290</y>
+        <y>294</y>
         <width>131</width>
         <height>21</height>
        </rect>
@@ -2027,7 +2052,7 @@
       <property name="geometry">
        <rect>
         <x>150</x>
-        <y>290</y>
+        <y>294</y>
         <width>341</width>
         <height>21</height>
        </rect>
@@ -2048,7 +2073,7 @@
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>270</y>
+        <y>275</y>
         <width>131</width>
         <height>21</height>
        </rect>
@@ -2066,7 +2091,7 @@
       <property name="geometry">
        <rect>
         <x>150</x>
-        <y>270</y>
+        <y>275</y>
         <width>341</width>
         <height>21</height>
        </rect>
