@@ -530,7 +530,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>4</number>
+     <number>3</number>
     </property>
     <widget class="QWidget" name="intro">
      <widget class="QPushButton" name="nextBtn_intro">
@@ -929,6 +929,25 @@
       </property>
       <property name="orientation">
        <enum>Qt::Orientation::Horizontal</enum>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="startDELTA">
+      <property name="geometry">
+       <rect>
+        <x>190</x>
+        <y>160</y>
+        <width>211</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Запустить DELTARUNE</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+      <property name="tristate">
+       <bool>false</bool>
       </property>
      </widget>
     </widget>
@@ -1593,6 +1612,25 @@
         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:400; color: rgba(40, 40, 40, 1)&quot;&gt;А теперь мы просто ждём&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
+      <widget class="QLabel" name="dead_image">
+       <property name="geometry">
+        <rect>
+         <x>400</x>
+         <y>-5</y>
+         <width>141</width>
+         <height>81</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="pixmap">
+        <pixmap resource="resources.qrc">:/img/resources/killed_meme.png</pixmap>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignmentFlag::AlignCenter</set>
+       </property>
+      </widget>
      </widget>
      <widget class="Line" name="topline_install">
       <property name="geometry">
@@ -1734,9 +1772,9 @@
        <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
       </property>
      </widget>
-     <widget class="QPushButton" name="Btn_details">
+     <widget class="QPushButton" name="showDetailsBtn">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -1757,6 +1795,19 @@
       </property>
       <property name="flat">
        <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QPlainTextEdit" name="detailedlogs">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>176</y>
+        <width>491</width>
+        <height>154</height>
+       </rect>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
       </property>
      </widget>
     </widget>

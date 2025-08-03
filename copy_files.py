@@ -1,62 +1,80 @@
-import sys
 import os
 import shutil
-import json
+import subprocess
+import tempfile
 import time
-from time import sleep
 
-def load_args():
-    if len(sys.argv) == 2 and sys.argv[1].endswith('.json'):
-        with open(sys.argv[1], 'r') as f:
-            return json.load(f)
-    return None
+def copy_game_files(src_copy_dir: str, dest_dir: str, datas_temp_dir: str, data_sel: str, data_3: str):
+    if os.name != 'nt':
+        print("This function is intended for Windows only.")
+        return
 
-def safe_copy(src, dst, max_retries=5, delay=1):
-    """Копирование с повторными попытками при блокировке файла"""
-    for attempt in range(max_retries):
-        try:
-            shutil.copy2(src, dst)
-            return True
-        except PermissionError as e:
-            if attempt == max_retries - 1:
-                raise
-            time.sleep(delay)
-    return False
+    done_flag_path = os.path.join(tempfile.gettempdir(), '__copy_done__')
 
-def copy_files(args):
     try:
-        # Создаем директории
-        os.makedirs(args['dest'], exist_ok=True)
+        if os.path.exists(done_flag_path):
+            os.remove(done_flag_path)
 
-        # Копируем исходные файлы с повторами
-        if os.path.exists(args['src']):
-            for root, dirs, files in os.walk(args['src']):
-                rel_path = os.path.relpath(root, args['src'])
-                target_dir = os.path.join(args['dest'], rel_path)
-                os.makedirs(target_dir, exist_ok=True)
-                for file in files:
-                    src_file = os.path.join(root, file)
-                    dst_file = os.path.join(target_dir, file)
-                    safe_copy(src_file, dst_file)
+        def is_admin():
+            try:
+                return os.getuid() == 0
+            except AttributeError:
+                import ctypes
+                return ctypes.windll.shell32.IsUserAnAdmin()
+
+        if is_admin():
+            print("Есть права администратора, копируем напрямую...")
+            shutil.copytree(src_copy_dir, dest_dir, dirs_exist_ok=True)
+            shutil.copy(data_sel, os.path.join(dest_dir, os.path.basename(data_sel)))
+            shutil.copy(data_3, os.path.join(dest_dir, os.path.basename(data_3)))
+            with open(done_flag_path, "w") as f:
+                f.write("done")
+            return
+
+        print(src_copy_dir, dest_dir, data_sel, data_3)
+        script_code = f"""
+import shutil
+import os
+import time
+import tempfile
+
+src = r'''{src_copy_dir}'''
+dest = r'''{dest_dir}'''
+data_sel = r'''{data_sel}'''
+data_3 = r'''{data_3}'''
+datas_temp_dir = r'''{datas_temp_dir}'''
+done_flag_path = os.path.join(tempfile.gettempdir(), '__copy_done__')
+
+try:
+    shutil.copytree(src, dest, dirs_exist_ok=True)
+    shutil.copy(os.path.join(datas_temp_dir, "data_sel.win"), data_sel)
+    shutil.copy(os.path.join(datas_temp_dir, "data_3.win"), data_3)
+    with open(done_flag_path, "w") as f:
+        f.write("done")
+except Exception as e:
+    with open(os.path.join(tempfile.gettempdir(), '__copy_done__'), "w") as f:
+        f.write("error: " + str(e))
+"""
+
+        script_path = os.path.join(tempfile.gettempdir(), "__copy_admin__.py")
+        with open(script_path, "w", encoding="utf-8") as f:
+            f.write(script_code)
+
+        subprocess.run([
+            "powershell", "-Command",
+            f'Start-Process python -ArgumentList \'"{script_path}"\' -Verb RunAs'
+        ])
+
+        for _ in range(120):
+            if os.path.exists(done_flag_path):
+                with open(done_flag_path, "r") as f:
+                    content = f.read()
+                if content.startswith("error:"):
+                    raise RuntimeError(content)
+                break
+            time.sleep(1)
         else:
-            print(f"Source directory not found: {args['src']}")
-            return 1
+            raise TimeoutError("Операция копирования не завершилась за разумное время.")
 
-        # Копируем патч-файлы с повторами
-        safe_copy(args['patch_file_1'], os.path.join(os.path.dirname(args['dest']), "data.win"))
-        safe_copy(args['patch_file_2'], os.path.join(args['dest'], "data.win"))
-
-        return 0
     except Exception as e:
-        print(f"Error during copying: {e}")
-        sleep(5)
-        return 2
-
-if __name__ == "__main__":
-    args = load_args() or {
-        'src': sys.argv[1],
-        'dest': sys.argv[2],
-        'patch_file_1': sys.argv[3],
-        'patch_file_2': sys.argv[4]
-    }
-    sys.exit(copy_files(args))
+        print(f"Ошибка копирования: {e}")

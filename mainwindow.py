@@ -1,95 +1,42 @@
 import sys
 import os
+import tempfile
 import subprocess
 import ctypes
 import winreg
 import threading
 import re
-import shutil
 import glob
 import json
-os.environ["QT_QPA_PLATFORM"] = "windows:darkmode=0"
-
-from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QFileDialog
-from PySide6.QtGui import QPixmap
-from PySide6.QtCore import QObject, QEvent, Signal, QTimer
-from ui_form import Ui_PatchWizard
-
-def copy_game_files(src_copy_dir, dest_dir, target_data_sel, target_data_3):
-    import os
-    import shutil
-    import ctypes
-    import sys
-    import tempfile
-
-    def is_admin():
-        try:
-            return ctypes.windll.shell32.IsUserAnAdmin()
-        except:
-            return False
-
-    def try_copy():
-        try:
-            # Создаем структуру папок если нужно
-            os.makedirs(os.path.join(dest_dir, 'lang'), exist_ok=True)
-            os.makedirs(os.path.join(dest_dir, 'vid'), exist_ok=True)
-
-            # Копируем все файлы
-            shutil.copytree(src_copy_dir, dest_dir, dirs_exist_ok=True)
-            shutil.copy2(target_data_sel, os.path.join(os.path.dirname(dest_dir), 'data.win'))
-            shutil.copy2(target_data_3, os.path.join(dest_dir, 'data.win'))
-            return True
-        except PermissionError:
-            return False
-
-    if try_copy():
-        return True
-
-    if not is_admin():
-        # Создаем временный скрипт для копирования с правами админа
-        script = f"""
-import os
 import shutil
 
-src = r'{src_copy_dir}'
-dest = r'{dest_dir}'
-file1 = r'{target_data_sel}'
-file2 = r'{target_data_3}'
+from copy_files import copy_game_files
 
-try:
-    os.makedirs(os.path.join(dest, 'lang'), exist_ok=True)
-    os.makedirs(os.path.join(dest, 'vid'), exist_ok=True)
-    shutil.copytree(src, dest, dirs_exist_ok=True)
-    shutil.copy2(file1, os.path.join(os.path.dirname(dest), 'data.win'))
-    shutil.copy2(file2, os.path.join(dest, 'data.win'))
-except Exception as e:
-    print(f"Ошибка копирования: {e}")
-    input("Нажмите Enter для выхода...")
-    raise
-"""
+os.environ["QT_QPA_PLATFORM"] = "windows:darkmode=0"
 
-        with tempfile.NamedTemporaryFile(suffix='.py', delete=False, mode='w') as f:
-            f.write(script)
-            temp_script = f.name
+from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QFileDialog, QMessageBox
+from PySide6.QtGui import QPixmap
+from PySide6.QtCore import QObject, QEvent, Signal, QTimer, Qt
+from ui_form import Ui_PatchWizard
 
-        try:
-            # Запускаем с правами администратора
-            ctypes.windll.shell32.ShellExecuteW(
-                None, "runas", sys.executable, temp_script, None, 1
-            )
-            return True
-        finally:
-            try:
-                os.unlink(temp_script)
-            except:
-                pass
-    else:
-        # Если уже админ, но копирование не удалось
-        raise RuntimeError("Не удалось скопировать файлы даже с правами администратора")
+def is_admin():
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
 
-    return False
-
-
+def show_admin_warning():
+    msg = QMessageBox()
+    msg.setIcon(QMessageBox.Warning)
+    msg.setWindowTitle("Предупреждение")
+    msg.setText("Программа запущена с правами администратора")
+    msg.setInformativeText(
+        "Функция перетаскивания в приложение может работать некорректно.\n\n"
+        "Рекомендуется перезапустить программу без прав администратора."
+    )
+    msg.setStandardButtons(QMessageBox.Ok)
+    msg.setWindowFlags(Qt.WindowStaysOnTopHint)
+    msg.exec()
 
 def get_data_root():
     if getattr(sys, 'frozen', False):
@@ -104,9 +51,8 @@ class State:
     selected_folder = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\DELTARUNE"
     is_patch_applied = False
 
-
-
 class MainWindow(QMainWindow):
+    confirmation_requested = Signal(int, object)
     progress_changed = Signal(int)
     progressRequested = Signal(int, str)
     def __init__(self, parent=None):
@@ -122,11 +68,13 @@ class MainWindow(QMainWindow):
             "end_success": self.ui.end_success,
             "end_fail": self.ui.end_fail
         }
+        self.search_deltarune_steam_installations()
         self.goTo("intro")
 
         # variables
         self.select_folder(State.selected_folder)
         self.ui.chooseBtn.clicked.connect(self.select_folder_diag)
+        self.ui.pathField.textChanged.connect(self.path_input_update)
         self.ui.dropFrame.default_drop_label = """<div style="text-align: center; width: 100%;"><span style="color: rgba(98, 98, 98, 1);">Перетащите иконку игры, чтобы указать путь к папке</span></div>"""
         self.ui.dropFrame.default_classic_mode_label = """<div style="text-align: center; width: 100%;"><a href="#">Не работает? Классический режим</a></div>\n"""
 
@@ -144,7 +92,7 @@ class MainWindow(QMainWindow):
         self.ui.endBtn_intro.clicked.connect(QApplication.quit)
         self.ui.endBtn_path.clicked.connect(QApplication.quit)
         self.ui.endBtn_install.clicked.connect(QApplication.quit)
-        self.ui.endBtn_success.clicked.connect(QApplication.quit)
+        self.ui.endBtn_success.clicked.connect(self.on_finish_clicked)
         self.ui.endBtn_fail.clicked.connect(QApplication.quit)
         self.ui.endBtn_drop.clicked.connect(QApplication.quit)
 
@@ -152,13 +100,14 @@ class MainWindow(QMainWindow):
         self.drop_filter = DropFilter(self.ui.dropFrame, self.handle_dropped_files)
         self.ui.dropFrame.installEventFilter(self.drop_filter)
 
+        # other stuff
         self.data_root = get_data_root()
         self.bin_folder = os.path.join(self.data_root, 'bin')
         self.patch_folder = os.path.join(self.data_root, 'patch')
 
         self.progress_changed.connect(self.ui.patch_progress.setValue)
         self.progress_percent = int(0)
-        self.ui.version.setText(self.parse("version"))
+        self.ui.version.setText(self.parseInfo("version"))
 
         self.current_progress = 0
         self.target_progress = 0
@@ -168,7 +117,37 @@ class MainWindow(QMainWindow):
         self.timer.setInterval(5)
         self.progressRequested.connect(self.smoothPercentage)
 
-    def parse(self, key):
+        self.ui.detailedlogs.setVisible(False)
+        self.ui.dead_image.setVisible(False)
+        self.ui.showDetailsBtn.clicked.connect(lambda: self.ui.detailedlogs.setVisible(not self.ui.detailedlogs.isVisible()))
+        self.sendVerbose("Программа прошла этап инициализации")
+
+    def on_finish_clicked(self):
+        if self.ui.startDELTA.isChecked():
+            self.launch_deltarune()
+        QApplication.quit()
+
+    def launch_deltarune(self):
+        try:
+            game_exe = os.path.join(State.selected_folder, "DELTARUNE.exe")
+
+            if os.path.exists(game_exe):
+                subprocess.Popen([game_exe],
+                   cwd=State.selected_folder,
+                   shell=True,
+                   creationflags=subprocess.CREATE_NO_WINDOW)
+            else:
+                print("Файл DELTARUNE.exe не найден")
+        except Exception as e:
+            print(f"Ошибка при запуске игры: {e}")
+
+
+    def sendVerbose(self, text: str):
+        self.ui.detailedlogs.appendPlainText(text)
+        scrollbar = self.ui.detailedlogs.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
+
+    def parseInfo(self, key):
         filename=f"{self.data_root}/info.txt"
         try:
             with open(filename, "r", encoding="utf-8") as f:
@@ -179,6 +158,7 @@ class MainWindow(QMainWindow):
                         value = line.split("=", 1)[1].strip()
                         return value
         except FileNotFoundError:
+            self.sendVerbose(f"Файл {filename} не найден.")
             print(f"Файл {filename} не найден.")
         return None
 
@@ -199,10 +179,19 @@ class MainWindow(QMainWindow):
         return True
 
     def get_free_space_mb(self, path):
-        path = os.path.abspath(path)
-        _, _, free = shutil.disk_usage(path)
-        free_mb = int(free / (1024 * 1024))
-        return f"{free_mb:,}".replace(",", " ")
+        try:
+            path = os.path.abspath(path)
+            drive, _ = os.path.splitdrive(path)
+
+            if not drive:
+                drive = os.sep
+
+            _, _, free = shutil.disk_usage(drive)
+            free_mb = int(free / (1024 * 1024))
+            return f"{free_mb:,}".replace(",", " ")
+        except Exception as e:
+            print(e)
+            return "???"
 
     def handle_dropped_files(self, filepaths):
         file = filepaths[0]
@@ -211,6 +200,7 @@ class MainWindow(QMainWindow):
         if sys.platform.startswith("win"):
             if file_lower.endswith(".exe"):
                 folder_path = os.path.dirname(file)
+                self.sendVerbose(f"Папка с .exe: {folder_path}")
                 print("Папка с .exe:", folder_path)
             elif file_lower.endswith(".lnk"):
                 try:
@@ -227,12 +217,16 @@ class MainWindow(QMainWindow):
 
                     if target_path.endswith(".exe"):
                         folder_path = os.path.dirname(target_path)
+                        self.sendVerbose(f"Папка с .exe из ярлыка: {folder_path}")
                         print("Папка с .exe из ярлыка:", folder_path)
                     else:
+                        self.sendVerbose(f"Целевой файл ярлыка не .exe: {target_path}")
                         print("Целевой файл ярлыка не .exe:", target_path)
                 except ImportError:
-                    print("pywin32 не установлен — не могу обработать .lnk")
+                    self.sendVerbose("pywin32 не установлен — не удалось обработать .lnk")
+                    print("pywin32 не установлен — не удалось обработать .lnk")
                 except Exception as e:
+                    self.sendVerbose(f"Ошибка чтения .lnk: {e}")
                     print("Ошибка чтения .lnk:", e)
             elif file_lower.endswith(".url"):
                 try:
@@ -241,15 +235,15 @@ class MainWindow(QMainWindow):
                         if "steam" in content:
                             folder_path = self.search_deltarune_steam_installations()
                         else:
-                            print("Это .url, но не steam")
+                            self.sendVerbose("Получен .url, но не steam")
+                            print("Получен .url, но не steam")
                 except Exception as e:
+                    self.sendVerbose(f"Ошибка чтения .url: {e}")
                     print("Ошибка чтения .url:", e)
-        elif sys.platform.startswith("linux"):
-            print("Linux")
         elif sys.platform == "darwin":
             print("macOS")
         else:
-            print(f"Неизвестная платформа: {sys.platform}")
+            print(f"Неподдерживаемая платформа: {sys.platform}")
         self.select_folder(folder_path)
     def goTo(self, page_name: str):
             match (page_name):
@@ -267,6 +261,7 @@ class MainWindow(QMainWindow):
             if page:
                 self.ui.stackedWidget.setCurrentWidget(page)
             else:
+                self.sendVerbose(f"Страница {page_name} не найдена!")
                 print(f"Страница {page_name} не найдена!")
 
     def select_folder(self, folder_path):
@@ -280,20 +275,29 @@ class MainWindow(QMainWindow):
             self.ui.pathField.setText(folder_path)
             State.selected_folder = folder_path
             self.ui.nextBtn_drop.setEnabled(True)
+            self.ui.nextBtn_path.setEnabled(True)
         else:
             if (folder_path == State.selected_folder):
                 return
             pushlogo = QPixmap(":/img/resources/drop_icon_err.png")
             self.ui.space_available_drop.setText("*Не выбран диск*")
-            self.ui.space_available_path.setText("*Не выбран диск*")
+            self.ui.space_available_path.setText(f"{self.get_free_space_mb(folder_path)} Мбайт")
             self.ui.drop_icon.setPixmap(pushlogo)
             self.ui.drop_label.setText("""<div style="text-align: center; width: 100%;"><span style="text-align: center;"><font size="4">Не удалось найти игру, попробуйте ещё раз</font></span></div>""")
             self.ui.classic_mode_label.setText("""<div style="text-align: center; width: 100%;"><a href="#">Классический режим</a></div>\n""")
+            self.ui.nextBtn_drop.setEnabled(False)
+            self.ui.nextBtn_path.setEnabled(False)
 
     def select_folder_diag(self):
         folder = QFileDialog.getExistingDirectory(self, "Выберите папку")
         if folder:
+            self.ui.pathField.setText(folder)
             self.select_folder(folder)
+
+    def path_input_update(self, text):
+        if text:
+            self.ui.pathField.setText(text)
+            self.select_folder(text)
 
     def search_deltarune_steam_installations(self):
         def get_steam_path_from_registry():
@@ -323,6 +327,7 @@ class MainWindow(QMainWindow):
                         lib_path = os.path.join(fixed_path, "steamapps", "common")
                         paths.append(lib_path)
             except Exception as e:
+                self.sendVerbose(f"[ERROR] Ошибка при чтении libraryfolders.vdf: {e}")
                 print(f"[ERROR] Ошибка при чтении libraryfolders.vdf: {e}")
 
             return paths
@@ -330,6 +335,7 @@ class MainWindow(QMainWindow):
 
         steam_path = get_steam_path_from_registry()
         if not steam_path:
+            self.sendVerbose("[ERROR] Steam не найден в реестре.")
             print("[ERROR] Steam не найден в реестре.")
             return []
 
@@ -344,74 +350,187 @@ class MainWindow(QMainWindow):
                 full_path = os.path.join(lib_path, folder)
                 if os.path.isdir(full_path):
                     if self.checkDELTARUNE(full_path):
+                        self.sendVerbose(f"[FOUND] Найдена Deltarune: {full_path}")
                         print(f"[FOUND] Найдена Deltarune: {full_path}")
                         self.select_folder(full_path)
                         return full_path
         if found_count == 0:
+            self.sendVerbose("[ERROR] Deltarune не найдена ни в одной из библиотек.")
             print("[ERROR] Deltarune не найдена ни в одной из библиотек.")
 
     def smoothPercentage(self, newPercent, title):
+        self.sendVerbose(title)
         self.target_progress = int(newPercent)
         self.status_text = title
         self.updateProgress()
-        print(f"[smoothPercentage] target: {self.target_progress}, title: {self.status_text}")
         if not self.timer.isActive():
-            print("[smoothPercentage] starting timer")
             self.timer.start()
 
     def _tick(self):
-        print(f"[tick] current={self.current_progress}, target={self.target_progress}")
         if self.current_progress < self.target_progress:
             self.current_progress += 1
             self.updateProgress()
         else:
             self.timer.stop()
-            print("[_tick] Timer stopped")
 
     def updateProgress(self):
-        print(f"[updateProgress] progress: {self.current_progress}, title: {self.status_text}")
         self.progress_changed.emit(self.current_progress)
         self.ui.install_percentage.setText(f"{self.current_progress}%")
         self.ui.install_status.setText(self.status_text)
 
     # STARTING PATCHING FROM HERE
     def start_patching_async(self):
+
+
+        def handle_confirmation(error_code, callback):
+            msg = QMessageBox()
+            msg.setWindowTitle("Внимание!")
+            msg.setIcon(QMessageBox.Warning)
+
+            if error_code == 203:
+                msg.setText("Версия перевода неактуальна!")
+                msg.setInformativeText("Хотите продолжить установку?")
+            elif error_code == 204:
+                msg.setText("Обнаружена модификация!")
+                msg.setInformativeText("Возможно вы уже установили перевод. Всё равно продолжить?")
+
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            result = msg.exec() == QMessageBox.Yes
+            callback(result)
+
+        self.confirmation_requested.connect(handle_confirmation)
+
         def patching_task():
             patcher_exe = os.path.join(self.data_root, "bin", "GMS-UTML-Patcher.exe")
-            if sys.platform.startswith("win"):
+            if not sys.platform.startswith("win"):
+                self.progressRequested.emit(0, "Патчинг доступен только на Windows")
+                return
+
+            try:
+                self.progressRequested.emit(15, "Патчим выбор главы...")
+                original_data = os.path.join(State.selected_folder, "data.win")
+                patch_file = os.path.join(self.patch_folder, "ch_sel", "data.json")
+                result_data_sel = os.path.join(self.patch_folder, "data_sel.win")
+
                 try:
-                    self.progressRequested.emit(15, "Патчим выбор главы...")
-                    data_win_1 = os.path.join(State.selected_folder, "data.win")
-                    patch_file_1 = os.path.join(self.patch_folder, "ch_sel", "data.json")
-                    result_file_1 = os.path.join(self.patch_folder, "data_sel.win")
-                    subprocess.run([patcher_exe, "--data-path", data_win_1, "--patcher-file", patch_file_1, "--skip-hashcheck", "--output", result_file_1], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
-                    self.progressRequested.emit(50, "Выбор главы пропатчен.")
+                    subprocess.run([
+                        patcher_exe,
+                        "--data-path", original_data,
+                        "--patcher-file", patch_file,
+                        "--output", result_data_sel
+                    ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                except subprocess.CalledProcessError as e:
+                    if e.returncode in (203, 204):
+                        from threading import Event
+                        event = Event()
+                        user_choice = [None]
 
-                    self.progressRequested.emit(55, "Патчим третью главу...")
-                    data_win_2 = os.path.join(State.selected_folder, "chapter3_windows", "data.win")
-                    patch_file_2 = os.path.join(self.patch_folder, "ch3", "data3.json")
-                    result_file_2 = os.path.join(self.patch_folder, "data_3.win")
-                    subprocess.run([patcher_exe, "--data-path", data_win_2, "--patcher-file", patch_file_2, "--skip-hashcheck", "--output", result_file_2], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
-                    self.progressRequested.emit(80, "Третья глава пропатчена.")
+                        def callback(result):
+                            user_choice[0] = result
+                            event.set()
+                        self.confirmation_requested.emit(e.returncode, callback)
 
-                    self.progressRequested.emit(85, "Копируем файлы...")
+                        event.wait(180)
 
-                    src_copy_dir = os.path.join(self.patch_folder, "copy", "chapter3")
-                    dest_copy_dir = os.path.join(State.selected_folder, "chapter3_windows")
-                    target_data_sel = os.path.join(State.selected_folder, "data.win")
-                    target_data_3 = os.path.join(State.selected_folder, "chapter3_windows", "data.win")
+                        if not user_choice[0]:
+                            self.progressRequested.emit(0, "Установка отменена")
+                            self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
+                            self.ui.error.setText("Отмена пользователем")
+                            self.ui.nextBtn_install.setEnabled(True)
+                            return
+                        subprocess.run([
+                            patcher_exe,
+                            "--data-path", original_data,
+                            "--patcher-file", patch_file,
+                            "--skip-timecheck",
+                            "--output", result_data_sel
+                        ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
 
-                    copy_game_files(src_copy_dir, dest_copy_dir, target_data_sel, target_data_3)
+                    else:
+                        raise
 
-                    self.progressRequested.emit(100, "Патчинг завершён.")
-                    self.ui.nextBtn_install.setEnabled(True)
-                except Exception as e:
-                    print(str(e))
-                    self.progressRequested.emit(0, f"Ошибка: {e}")
-                    self.ui.error.setText(str(e))
-                    self.goTo("end_fail")
-            else:
-                self.progressRequested.emit(0, "Патчинг доступен только на Windows.")
+                self.progressRequested.emit(50, "Выбор главы пропатчен")
+
+                self.progressRequested.emit(55, "Патчим третью главу...")
+                original_ch3_data = os.path.join(State.selected_folder, "chapter3_windows", "data.win")
+                ch3_patch = os.path.join(self.patch_folder, "ch3", "data3.json")
+                result_data_3 = os.path.join(self.patch_folder, "data_3.win")
+
+                try:
+                    subprocess.run([
+                        patcher_exe,
+                        "--data-path", original_ch3_data,
+                        "--patcher-file", ch3_patch,
+                        "--output", result_data_3
+                    ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                except subprocess.CalledProcessError as e:
+                    if e.returncode in (203, 204):
+                        event = Event()
+                        user_choice = [None]
+
+                        def callback(result):
+                            user_choice[0] = result
+                            event.set()
+                        self.confirmation_requested.emit(e.returncode, callback)
+
+                        event.wait(180)
+
+                        if not user_choice[0]:
+                            self.progressRequested.emit(0, "Установка отменена")
+                            self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
+                            self.ui.error.setText("Отмена пользователем")
+                            self.ui.nextBtn_install.setEnabled(True)
+                            return
+                        subprocess.run([
+                            patcher_exe,
+                            "--data-path", original_ch3_data,
+                            "--patcher-file", ch3_patch,
+                            "--skip-timecheck",
+                            "--output", result_data_3
+                        ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                    else:
+                        raise
+
+                self.progressRequested.emit(80, "Третья глава пропатчена")
+
+                self.progressRequested.emit(85, "Копируем файлы...")
+                src_dir = os.path.join(self.patch_folder, "copy", "chapter3")
+                dest_dir = os.path.join(State.selected_folder, "chapter3_windows")
+
+                copy_game_files(
+                    src_dir,
+                    dest_dir,
+                    self.patch_folder,
+                    original_data,
+                    original_ch3_data
+                )
+
+                self.progressRequested.emit(95, "Удаляем временные файлы...")
+
+                temp_files = [
+                    result_data_sel,
+                    result_data_3
+                ]
+                for temp_file in temp_files:
+                    try:
+                        if os.path.exists(temp_file):
+                            os.remove(temp_file)
+                    except Exception as e:
+                        print(f"Не удалось удалить временный файл {temp_file}: {e}")
+
+                self.progressRequested.emit(100, "Патчинг завершён!")
+                self.ui.nextBtn_install.setEnabled(True)
+
+            except Exception as e:
+                error_msg = str(e)
+                print(f"Ошибка установки: {error_msg}")
+                self.progressRequested.emit(0, f"Ошибка: {error_msg}")
+                self.ui.error.setText(error_msg)
+                self.ui.detailedlogs.setVisible(True)
+                self.ui.dead_image.setVisible(True)
+                self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
+                self.ui.nextBtn_install.setEnabled(True)
+
 
         threading.Thread(target=patching_task, daemon=True).start()
 
@@ -464,6 +583,10 @@ class DropFilter(QObject):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
+
+    if is_admin():
+        show_admin_warning()
+
     widget = MainWindow()
     widget.setFixedSize(530, 400)
     widget.show()

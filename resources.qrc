@@ -6,6 +6,8 @@
         <file>resources/icon.png</file>
         <file>resources/drop_icon_game.png</file>
         <file>resources/drop_icon_err.png</file>
+        <file>resources/killed_meme.png</file>
+        <file>resources/meme_stop.png</file>
     </qresource>
     <qresource prefix="/icons">
         <file>resources/cozyinn.ico</file>
