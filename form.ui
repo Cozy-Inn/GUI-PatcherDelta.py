@@ -2153,7 +2153,7 @@
        </font>
       </property>
       <property name="text">
-       <string>69.0 Мбайт</string>
+       <string>300 Мбайт</string>
       </property>
      </widget>
      <widget class="QLabel" name="roflcopyright_path">

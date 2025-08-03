@@ -7,16 +7,16 @@ import winreg
 import threading
 import re
 import glob
-import json
 import shutil
 
-from copy_files import copy_game_files
+from copy_files import copy_game_files_win
+from messageboxes import show_admin_warning
 
 os.environ["QT_QPA_PLATFORM"] = "windows:darkmode=0"
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QFileDialog, QMessageBox
 from PySide6.QtGui import QPixmap
-from PySide6.QtCore import QObject, QEvent, Signal, QTimer, Qt
+from PySide6.QtCore import QObject, QEvent, Signal, QTimer
 from ui_form import Ui_PatchWizard
 
 def is_admin():
@@ -24,19 +24,6 @@ def is_admin():
         return ctypes.windll.shell32.IsUserAnAdmin()
     except:
         return False
-
-def show_admin_warning():
-    msg = QMessageBox()
-    msg.setIcon(QMessageBox.Warning)
-    msg.setWindowTitle("Предупреждение")
-    msg.setText("Программа запущена с правами администратора")
-    msg.setInformativeText(
-        "Функция перетаскивания в приложение может работать некорректно.\n\n"
-        "Рекомендуется перезапустить программу без прав администратора."
-    )
-    msg.setStandardButtons(QMessageBox.Ok)
-    msg.setWindowFlags(Qt.WindowStaysOnTopHint)
-    msg.exec()
 
 def get_data_root():
     if getattr(sys, 'frozen', False):
@@ -68,7 +55,10 @@ class MainWindow(QMainWindow):
             "end_success": self.ui.end_success,
             "end_fail": self.ui.end_fail
         }
-        self.search_deltarune_steam_installations()
+
+        if (sys.platform.startswith("win")): 
+            self.search_deltarune_steam_installations_win()
+        
         self.goTo("intro")
 
         # variables
@@ -86,7 +76,7 @@ class MainWindow(QMainWindow):
         self.ui.classic_mode_label.linkActivated.connect(lambda: self.goTo("select_path"))
 
         self.ui.backBtn_drop.clicked.connect(lambda: self.goTo("intro"))
-        self.ui.backBtn_path.clicked.connect(lambda: self.goTo("drop_link"))
+        self.ui.backBtn_path.clicked.connect(lambda: self.goTo("intro"))
 
         # programm exits
         self.ui.endBtn_intro.clicked.connect(QApplication.quit)
@@ -132,15 +122,12 @@ class MainWindow(QMainWindow):
             game_exe = os.path.join(State.selected_folder, "DELTARUNE.exe")
 
             if os.path.exists(game_exe):
-                subprocess.Popen([game_exe],
-                   cwd=State.selected_folder,
-                   shell=True,
-                   creationflags=subprocess.CREATE_NO_WINDOW)
+                command = f'start "" "{game_exe}"'
+                subprocess.Popen(command, cwd=State.selected_folder, shell=True)
             else:
                 print("Файл DELTARUNE.exe не найден")
         except Exception as e:
             print(f"Ошибка при запуске игры: {e}")
-
 
     def sendVerbose(self, text: str):
         self.ui.detailedlogs.appendPlainText(text)
@@ -154,7 +141,6 @@ class MainWindow(QMainWindow):
                 for line in f:
                     line = line.strip()
                     if line.startswith(f"{key} ="):
-                        # Получаем всё после '=' и убираем пробелы
                         value = line.split("=", 1)[1].strip()
                         return value
         except FileNotFoundError:
@@ -233,13 +219,16 @@ class MainWindow(QMainWindow):
                     with open(file, "r", encoding="utf-8") as f:
                         content = f.read().lower()
                         if "steam" in content:
-                            folder_path = self.search_deltarune_steam_installations()
+                            folder_path = self.search_deltarune_steam_installations_win()
                         else:
                             self.sendVerbose("Получен .url, но не steam")
                             print("Получен .url, но не steam")
                 except Exception as e:
                     self.sendVerbose(f"Ошибка чтения .url: {e}")
                     print("Ошибка чтения .url:", e)
+            else:
+                # предположим что это папка
+                folder_path = file
         elif sys.platform == "darwin":
             print("macOS")
         else:
@@ -299,7 +288,7 @@ class MainWindow(QMainWindow):
             self.ui.pathField.setText(text)
             self.select_folder(text)
 
-    def search_deltarune_steam_installations(self):
+    def search_deltarune_steam_installations_win(self):
         def get_steam_path_from_registry():
             try:
                 with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam") as key:
@@ -323,9 +312,19 @@ class MainWindow(QMainWindow):
                 for block in matches:
                     path_match = re.search(r'"path"\s+"([^"]+)"', block)
                     if path_match:
-                        fixed_path = os.path.normpath(path_match.group(1))
-                        lib_path = os.path.join(fixed_path, "steamapps", "common")
-                        paths.append(lib_path)
+                        raw_path = path_match.group(1)
+                        try:
+                            fixed_path = os.path.abspath(os.path.normpath(raw_path))
+                            if os.path.exists(fixed_path):
+                                lib_path = os.path.join(fixed_path, "steamapps", "common")
+                                if os.path.exists(lib_path):
+                                    paths.append(os.path.realpath(lib_path))
+                                else:
+                                    print(f"[WARN] Папка steamapps/common не найдена в: {fixed_path}")
+                            else:
+                                print(f"[WARN] Путь не существует: {raw_path} → {fixed_path}")
+                        except Exception as e:
+                            print(f"[ERROR] Ошибка обработки пути '{raw_path}': {str(e)}")
             except Exception as e:
                 self.sendVerbose(f"[ERROR] Ошибка при чтении libraryfolders.vdf: {e}")
                 print(f"[ERROR] Ошибка при чтении libraryfolders.vdf: {e}")
@@ -408,15 +407,15 @@ class MainWindow(QMainWindow):
 
             try:
                 self.progressRequested.emit(15, "Патчим выбор главы...")
-                original_data = os.path.join(State.selected_folder, "data.win")
-                patch_file = os.path.join(self.patch_folder, "ch_sel", "data.json")
+                
+                original_data_sel = os.path.join(State.selected_folder, "data.win")
+                patch_file_sel = os.path.join(self.patch_folder, "ch_sel", "data.json")
                 result_data_sel = os.path.join(self.patch_folder, "data_sel.win")
-
                 try:
                     subprocess.run([
                         patcher_exe,
-                        "--data-path", original_data,
-                        "--patcher-file", patch_file,
+                        "--data-path", original_data_sel,
+                        "--patcher-file", patch_file_sel,
                         "--output", result_data_sel
                     ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
                 except subprocess.CalledProcessError as e:
@@ -440,8 +439,8 @@ class MainWindow(QMainWindow):
                             return
                         subprocess.run([
                             patcher_exe,
-                            "--data-path", original_data,
-                            "--patcher-file", patch_file,
+                            "--data-path", original_data_sel,
+                            "--patcher-file", patch_file_sel,
                             "--skip-timecheck",
                             "--output", result_data_sel
                         ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
@@ -449,13 +448,12 @@ class MainWindow(QMainWindow):
                     else:
                         raise
 
-                self.progressRequested.emit(50, "Выбор главы пропатчен")
+                self.progressRequested.emit(30, "Выбор главы пропатчен")
 
-                self.progressRequested.emit(55, "Патчим третью главу...")
+                self.progressRequested.emit(30, "Патчим третью главу...")
                 original_ch3_data = os.path.join(State.selected_folder, "chapter3_windows", "data.win")
                 ch3_patch = os.path.join(self.patch_folder, "ch3", "data3.json")
                 result_data_3 = os.path.join(self.patch_folder, "data_3.win")
-
                 try:
                     subprocess.run([
                         patcher_exe,
@@ -491,25 +489,28 @@ class MainWindow(QMainWindow):
                     else:
                         raise
 
-                self.progressRequested.emit(80, "Третья глава пропатчена")
+                self.progressRequested.emit(70, "Третья глава пропатчена")
 
-                self.progressRequested.emit(85, "Копируем файлы...")
+                self.progressRequested.emit(70, "Копируем файлы...")
                 src_dir = os.path.join(self.patch_folder, "copy", "chapter3")
                 dest_dir = os.path.join(State.selected_folder, "chapter3_windows")
 
-                copy_game_files(
-                    src_dir,
-                    dest_dir,
-                    self.patch_folder,
-                    original_data,
-                    original_ch3_data
+                copy_config = { "folders": {}, "files": {}}
+
+                copy_config["folders"][src_dir] = dest_dir
+                copy_config["files"][result_data_3] = original_ch3_data
+                copy_config["files"][result_data_sel] = original_data_sel
+
+                bat_file = copy_game_files_win(
+                    copy_config, self.sendVerbose
                 )
 
                 self.progressRequested.emit(95, "Удаляем временные файлы...")
 
                 temp_files = [
                     result_data_sel,
-                    result_data_3
+                    result_data_3,
+                    bat_file
                 ]
                 for temp_file in temp_files:
                     try:
@@ -520,7 +521,6 @@ class MainWindow(QMainWindow):
 
                 self.progressRequested.emit(100, "Патчинг завершён!")
                 self.ui.nextBtn_install.setEnabled(True)
-
             except Exception as e:
                 error_msg = str(e)
                 print(f"Ошибка установки: {error_msg}")
