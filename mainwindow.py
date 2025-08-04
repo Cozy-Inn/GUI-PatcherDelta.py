@@ -1,16 +1,15 @@
 import sys
 import os
-import tempfile
 import subprocess
-import ctypes
 import winreg
 import threading
 import re
 import glob
 import shutil
+from pathlib import Path
 
 from copy_files import copy_game_files_win
-from messageboxes import show_admin_warning
+from messageboxes import show_admin_warning, is_admin
 
 os.environ["QT_QPA_PLATFORM"] = "windows:darkmode=0"
 
@@ -19,11 +18,6 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtCore import QObject, QEvent, Signal, QTimer
 from ui_form import Ui_PatchWizard
 
-def is_admin():
-    try:
-        return ctypes.windll.shell32.IsUserAnAdmin()
-    except:
-        return False
 
 def get_data_root():
     if getattr(sys, 'frozen', False):
@@ -119,13 +113,21 @@ class MainWindow(QMainWindow):
 
     def launch_deltarune(self):
         try:
-            game_exe = os.path.join(State.selected_folder, "DELTARUNE.exe")
+            if sys.platform.startswith("win"):
+                game_exe = os.path.join(State.selected_folder, "DELTARUNE.exe")
 
-            if os.path.exists(game_exe):
-                command = f'start "" "{game_exe}"'
-                subprocess.Popen(command, cwd=State.selected_folder, shell=True)
-            else:
-                print("Файл DELTARUNE.exe не найден")
+                if os.path.exists(game_exe):
+                    command = f'start "" "{game_exe}"'
+                    subprocess.Popen(command, cwd=State.selected_folder, shell=True)
+                else:
+                    print("Файл DELTARUNE.exe не найден")
+            elif sys.platform == "darwin":
+                app_path = os.path.join(State.selected_folder, "DELTARUNE.app")
+                if os.path.exists(app_path):
+                    command = ["open", app_path]
+                    subprocess.Popen(command, cwd=State.selected_folder)
+                else:
+                    print("Файл DELTARUNE.app не найден")
         except Exception as e:
             print(f"Ошибка при запуске игры: {e}")
 
@@ -230,7 +232,30 @@ class MainWindow(QMainWindow):
                 # предположим что это папка
                 folder_path = file
         elif sys.platform == "darwin":
-            print("macOS")
+            path = Path(file)
+            if path.suffix == ".app" and path.is_dir():
+                folder_path = str(path)
+                self.sendVerbose(f"Папка с .app: {folder_path}")
+                print("Папка с .app:", folder_path)
+            else:
+                app_path = None
+                for parent in path.parents:
+                    if parent.suffix == ".app" and parent.is_dir():
+                        app_path = parent
+                        break
+                if app_path:
+                    folder_path = str(app_path)
+                    self.sendVerbose(f"Найден .app в родителях: {folder_path}")
+                else:
+                    app_candidate = path.with_suffix(".app")
+                    if app_candidate.is_dir():
+                        folder_path = str(app_candidate)
+                        self.sendVerbose(f"Добавлен .app к пути: {folder_path}")
+                        print("Добавлен .app к пути:", folder_path)
+                    else:
+                        folder_path = str(path)
+                        self.sendVerbose(f"Просто используем переданный путь: {folder_path}")
+                        print("Просто используем переданный путь:", folder_path)
         else:
             print(f"Неподдерживаемая платформа: {sys.platform}")
         self.select_folder(folder_path)
@@ -346,7 +371,7 @@ class MainWindow(QMainWindow):
                 continue
 
             for folder in os.listdir(lib_path):
-                full_path = os.path.join(lib_path, folder)
+                full_path = str(Path(os.path.join(lib_path, folder)).resolve(strict=False))
                 if os.path.isdir(full_path):
                     if self.checkDELTARUNE(full_path):
                         self.sendVerbose(f"[FOUND] Найдена Deltarune: {full_path}")
@@ -357,6 +382,7 @@ class MainWindow(QMainWindow):
             self.sendVerbose("[ERROR] Deltarune не найдена ни в одной из библиотек.")
             print("[ERROR] Deltarune не найдена ни в одной из библиотек.")
 
+    # update percentage
     def smoothPercentage(self, newPercent, title):
         self.sendVerbose(title)
         self.target_progress = int(newPercent)
@@ -400,137 +426,185 @@ class MainWindow(QMainWindow):
         self.confirmation_requested.connect(handle_confirmation)
 
         def patching_task():
-            patcher_exe = os.path.join(self.data_root, "bin", "GMS-UTML-Patcher.exe")
-            if not sys.platform.startswith("win"):
-                self.progressRequested.emit(0, "Патчинг доступен только на Windows")
-                return
-
-            try:
-                self.progressRequested.emit(15, "Патчим выбор главы...")
-                
-                original_data_sel = os.path.join(State.selected_folder, "data.win")
-                patch_file_sel = os.path.join(self.patch_folder, "ch_sel", "data.json")
-                result_data_sel = os.path.join(self.patch_folder, "data_sel.win")
+            if sys.platform.startswith("win"):
+                patcher_exe = os.path.join(self.data_root, "bin", "win", "GMS-UTML-Patcher.exe")
                 try:
-                    subprocess.run([
-                        patcher_exe,
-                        "--data-path", original_data_sel,
-                        "--patcher-file", patch_file_sel,
-                        "--output", result_data_sel
-                    ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
-                except subprocess.CalledProcessError as e:
-                    if e.returncode in (203, 204):
-                        from threading import Event
-                        event = Event()
-                        user_choice = [None]
-
-                        def callback(result):
-                            user_choice[0] = result
-                            event.set()
-                        self.confirmation_requested.emit(e.returncode, callback)
-
-                        event.wait(180)
-
-                        if not user_choice[0]:
-                            self.progressRequested.emit(0, "Установка отменена")
-                            self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
-                            self.ui.error.setText("Отмена пользователем")
-                            self.ui.nextBtn_install.setEnabled(True)
-                            return
+                    self.progressRequested.emit(15, "Патчим выбор главы...")
+                    
+                    original_data_sel = os.path.join(State.selected_folder, "data.win")
+                    patch_file_sel = os.path.join(self.patch_folder, "ch_sel", "data.json")
+                    result_data_sel = os.path.join(self.patch_folder, "data_sel.win")
+                    try:
                         subprocess.run([
                             patcher_exe,
                             "--data-path", original_data_sel,
                             "--patcher-file", patch_file_sel,
-                            "--skip-timecheck",
                             "--output", result_data_sel
                         ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                    except subprocess.CalledProcessError as e:
+                        if e.returncode in (203, 204):
+                            from threading import Event
+                            event = Event()
+                            user_choice = [None]
 
-                    else:
-                        raise
+                            def callback(result):
+                                user_choice[0] = result
+                                event.set()
+                            self.confirmation_requested.emit(e.returncode, callback)
 
-                self.progressRequested.emit(30, "Выбор главы пропатчен")
+                            event.wait(180)
 
-                self.progressRequested.emit(30, "Патчим третью главу...")
-                original_ch3_data = os.path.join(State.selected_folder, "chapter3_windows", "data.win")
-                ch3_patch = os.path.join(self.patch_folder, "ch3", "data3.json")
-                result_data_3 = os.path.join(self.patch_folder, "data_3.win")
-                try:
-                    subprocess.run([
-                        patcher_exe,
-                        "--data-path", original_ch3_data,
-                        "--patcher-file", ch3_patch,
-                        "--output", result_data_3
-                    ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
-                except subprocess.CalledProcessError as e:
-                    if e.returncode in (203, 204):
-                        event = Event()
-                        user_choice = [None]
+                            if not user_choice[0]:
+                                self.progressRequested.emit(0, "Установка отменена")
+                                self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
+                                self.ui.error.setText("Отмена пользователем")
+                                self.ui.nextBtn_install.setEnabled(True)
+                                return
+                            subprocess.run([
+                                patcher_exe,
+                                "--data-path", original_data_sel,
+                                "--patcher-file", patch_file_sel,
+                                "--skip-timecheck",
+                                "--output", result_data_sel
+                            ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                        else:
+                            raise
 
-                        def callback(result):
-                            user_choice[0] = result
-                            event.set()
-                        self.confirmation_requested.emit(e.returncode, callback)
+                    self.progressRequested.emit(30, "Выбор главы пропатчен")
 
-                        event.wait(180)
-
-                        if not user_choice[0]:
-                            self.progressRequested.emit(0, "Установка отменена")
-                            self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
-                            self.ui.error.setText("Отмена пользователем")
-                            self.ui.nextBtn_install.setEnabled(True)
-                            return
+                    self.progressRequested.emit(30, "Патчим третью главу...")
+                    original_ch3_data = os.path.join(State.selected_folder, "chapter3_windows", "data.win")
+                    ch3_patch = os.path.join(self.patch_folder, "ch3", "data3.json")
+                    result_data_3 = os.path.join(self.patch_folder, "data_3.win")
+                    try:
                         subprocess.run([
                             patcher_exe,
                             "--data-path", original_ch3_data,
                             "--patcher-file", ch3_patch,
-                            "--skip-timecheck",
                             "--output", result_data_3
                         ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
-                    else:
-                        raise
+                    except subprocess.CalledProcessError as e:
+                        if e.returncode in (203, 204):
+                            event = Event()
+                            user_choice = [None]
 
-                self.progressRequested.emit(70, "Третья глава пропатчена")
+                            def callback(result):
+                                user_choice[0] = result
+                                event.set()
+                            self.confirmation_requested.emit(e.returncode, callback)
 
-                self.progressRequested.emit(70, "Копируем файлы...")
-                src_dir = os.path.join(self.patch_folder, "copy", "chapter3")
-                dest_dir = os.path.join(State.selected_folder, "chapter3_windows")
+                            event.wait(180)
 
-                copy_config = { "folders": {}, "files": {}}
+                            if not user_choice[0]:
+                                self.progressRequested.emit(0, "Установка отменена")
+                                self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
+                                self.ui.error.setText("Отмена пользователем")
+                                self.ui.nextBtn_install.setEnabled(True)
+                                return
+                            subprocess.run([
+                                patcher_exe,
+                                "--data-path", original_ch3_data,
+                                "--patcher-file", ch3_patch,
+                                "--skip-timecheck",
+                                "--output", result_data_3
+                            ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                        else:
+                            raise
 
-                copy_config["folders"][src_dir] = dest_dir
-                copy_config["files"][result_data_3] = original_ch3_data
-                copy_config["files"][result_data_sel] = original_data_sel
+                    self.progressRequested.emit(70, "Третья глава пропатчена")
 
-                bat_file = copy_game_files_win(
-                    copy_config, self.sendVerbose
-                )
+                    self.progressRequested.emit(70, "Копируем файлы...")
+                    src_dir = os.path.join(self.patch_folder, "copy", "chapter3")
+                    dest_dir = os.path.join(State.selected_folder, "chapter3_windows")
 
-                self.progressRequested.emit(95, "Удаляем временные файлы...")
+                    copy_config = { "folders": {}, "files": {}}
 
-                temp_files = [
-                    result_data_sel,
-                    result_data_3,
-                    bat_file
-                ]
-                for temp_file in temp_files:
+                    copy_config["folders"][src_dir] = dest_dir
+                    copy_config["files"][result_data_3] = original_ch3_data
+                    copy_config["files"][result_data_sel] = original_data_sel
+
+                    bat_file = copy_game_files_win(
+                        copy_config, self.sendVerbose
+                    )
+
+                    self.progressRequested.emit(95, "Удаляем временные файлы...")
+
+                    temp_files = [
+                        result_data_sel,
+                        result_data_3,
+                        bat_file
+                    ]
+                    for temp_file in temp_files:
+                        try:
+                            if os.path.exists(temp_file):
+                                os.remove(temp_file)
+                        except Exception as e:
+                            print(f"Не удалось удалить временный файл {temp_file}: {e}")
+
+                    self.progressRequested.emit(100, "Патчинг завершён!")
+                    self.ui.nextBtn_install.setEnabled(True)
+                except Exception as e:
+                    error_msg = str(e)
+                    print(f"Ошибка установки: {error_msg}")
+                    self.progressRequested.emit(0, f"Ошибка: {error_msg}")
+                    self.ui.error.setText(error_msg)
+                    self.ui.detailedlogs.setVisible(True)
+                    self.ui.dead_image.setVisible(True)
+                    self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
+                    self.ui.nextBtn_install.setEnabled(True)
+            elif sys.platform == "darwin":
+                patcher_bin = os.path.join(self.data_root, "bin", "mac", "GMS-UTML-Patcher")
+                try:
+                    self.progressRequested.emit(15, "Патчим выбор главы...")
+                    
+                    original_data_sel = os.path.join(State.selected_folder, "data.ios")
+                    patch_file_sel = os.path.join(self.patch_folder, "ch_sel", "data.json")
+                    result_data_sel = os.path.join(self.patch_folder, "data_sel.ios")
                     try:
-                        if os.path.exists(temp_file):
-                            os.remove(temp_file)
-                    except Exception as e:
-                        print(f"Не удалось удалить временный файл {temp_file}: {e}")
+                        subprocess.run([
+                            patcher_bin,
+                            "--data-path", original_data_sel,
+                            "--patcher-file", patch_file_sel,
+                            "--output", result_data_sel
+                        ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                    except subprocess.CalledProcessError as e:
+                        if e.returncode in (203, 204):
+                            from threading import Event
+                            event = Event()
+                            user_choice = [None]
 
-                self.progressRequested.emit(100, "Патчинг завершён!")
-                self.ui.nextBtn_install.setEnabled(True)
-            except Exception as e:
-                error_msg = str(e)
-                print(f"Ошибка установки: {error_msg}")
-                self.progressRequested.emit(0, f"Ошибка: {error_msg}")
-                self.ui.error.setText(error_msg)
-                self.ui.detailedlogs.setVisible(True)
-                self.ui.dead_image.setVisible(True)
-                self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
-                self.ui.nextBtn_install.setEnabled(True)
+                            def callback(result):
+                                user_choice[0] = result
+                                event.set()
+                            self.confirmation_requested.emit(e.returncode, callback)
 
+                            event.wait(180)
+
+                            if not user_choice[0]:
+                                self.progressRequested.emit(0, "Установка отменена")
+                                self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
+                                self.ui.error.setText("Отмена пользователем")
+                                self.ui.nextBtn_install.setEnabled(True)
+                                return
+                            subprocess.run([
+                                patcher_exe,
+                                "--data-path", original_data_sel,
+                                "--patcher-file", patch_file_sel,
+                                "--skip-timecheck",
+                                "--output", result_data_sel
+                            ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                        else:
+                            raise
+                except Exception as e:
+                    error_msg = str(e)
+                    print(f"Ошибка установки: {error_msg}")
+                    self.progressRequested.emit(0, f"Ошибка: {error_msg}")
+                    self.ui.error.setText(error_msg)
+                    self.ui.detailedlogs.setVisible(True)
+                    self.ui.dead_image.setVisible(True)
+                    self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
+                    self.ui.nextBtn_install.setEnabled(True)
+                return
 
         threading.Thread(target=patching_task, daemon=True).start()
 
