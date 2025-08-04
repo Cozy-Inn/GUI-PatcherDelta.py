@@ -530,7 +530,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>3</number>
+     <number>4</number>
     </property>
     <widget class="QWidget" name="intro">
      <widget class="QPushButton" name="nextBtn_intro">
@@ -1235,7 +1235,7 @@
         </font>
        </property>
        <property name="text">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:400; color: rgba(40, 40, 40, 1)&quot;&gt;Перетащите иконку игры в зону для патчинга.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:400; color: rgba(40, 40, 40, 1)&quot;&gt;Перетащите игру в зону ниже&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
      </widget>
@@ -1615,9 +1615,9 @@
       <widget class="QLabel" name="dead_image">
        <property name="geometry">
         <rect>
-         <x>400</x>
+         <x>420</x>
          <y>-5</y>
-         <width>141</width>
+         <width>111</width>
          <height>81</height>
         </rect>
        </property>
@@ -1625,10 +1625,10 @@
         <string/>
        </property>
        <property name="pixmap">
-        <pixmap resource="resources.qrc">:/img/resources/killed_meme.png</pixmap>
+        <pixmap resource="resources.qrc">:/img/resources/lytaya_animka_ralsei2009.gif</pixmap>
        </property>
        <property name="alignment">
-        <set>Qt::AlignmentFlag::AlignCenter</set>
+        <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
        </property>
       </widget>
      </widget>
@@ -1897,7 +1897,7 @@
         </font>
        </property>
        <property name="text">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:400; color: rgba(40, 40, 40, 1)&quot;&gt;Укажите путь к папке с игрой, которую хотите пропатчить&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt; font-weight:400; color: rgba(40, 40, 40, 1)&quot;&gt;Укажите путь к папке с игрой&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
      </widget>

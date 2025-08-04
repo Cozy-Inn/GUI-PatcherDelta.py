@@ -7,15 +7,17 @@ import re
 import glob
 import shutil
 from pathlib import Path
-
+from time import sleep
+import simpleaudio as sa
 from copy_files import copy_game_files_win
-from messageboxes import show_admin_warning, is_admin
+from messageboxes import show_admin_warning, is_admin, show_critical_error
 
 os.environ["QT_QPA_PLATFORM"] = "windows:darkmode=0"
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QFileDialog, QMessageBox
-from PySide6.QtGui import QPixmap
-from PySide6.QtCore import QObject, QEvent, Signal, QTimer
+from PySide6.QtGui import QPixmap, QMovie, QIcon
+from PySide6.QtCore import QObject, QEvent, Signal, QTimer, QUrl
+
 from ui_form import Ui_PatchWizard
 
 
@@ -89,6 +91,10 @@ class MainWindow(QMainWindow):
         self.bin_folder = os.path.join(self.data_root, 'bin')
         self.patch_folder = os.path.join(self.data_root, 'patch')
 
+        if not os.path.isdir(self.bin_folder) or not os.path.isdir(self.patch_folder):
+            show_critical_error("Отсутствуют необходимые для установщика папки.", "Отсутвует папка <code>data</code>, <code>data/bin</code> или <code>data/patch</code>")
+            sys.exit(0)
+
         self.progress_changed.connect(self.ui.patch_progress.setValue)
         self.progress_percent = int(0)
         self.ui.version.setText(self.parseInfo("version"))
@@ -102,9 +108,14 @@ class MainWindow(QMainWindow):
         self.progressRequested.connect(self.smoothPercentage)
 
         self.ui.detailedlogs.setVisible(False)
-        self.ui.dead_image.setVisible(False)
         self.ui.showDetailsBtn.clicked.connect(lambda: self.ui.detailedlogs.setVisible(not self.ui.detailedlogs.isVisible()))
         self.sendVerbose("Программа прошла этап инициализации")
+
+        ralsei = QMovie(":/img/resources/lytaya_animka_ralsei2009.gif")
+        self.ui.dead_image.setMovie(ralsei)
+        ralsei.start()
+
+
 
     def on_finish_clicked(self):
         if self.ui.startDELTA.isChecked():
@@ -469,7 +480,6 @@ class MainWindow(QMainWindow):
                             ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
                         else:
                             raise
-
                     self.progressRequested.emit(30, "Выбор главы пропатчен")
 
                     self.progressRequested.emit(30, "Патчим третью главу...")
@@ -549,7 +559,9 @@ class MainWindow(QMainWindow):
                     self.progressRequested.emit(0, f"Ошибка: {error_msg}")
                     self.ui.error.setText(error_msg)
                     self.ui.detailedlogs.setVisible(True)
-                    self.ui.dead_image.setVisible(True)
+                    self.ui.dead_image.setPixmap(QPixmap(":/img/resources/ralsei_down.png"))
+                    
+
                     self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
                     self.ui.nextBtn_install.setEnabled(True)
             elif sys.platform == "darwin":
@@ -657,11 +669,12 @@ class DropFilter(QObject):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-
+    app.setWindowIcon(QIcon(":/icons/resources/cozyinn.ico"))
     if is_admin():
         show_admin_warning()
 
     widget = MainWindow()
     widget.setFixedSize(530, 400)
+    widget.setWindowIcon(QIcon(":/icons/resources/cozyinn.ico"))
     widget.show()
     sys.exit(app.exec())

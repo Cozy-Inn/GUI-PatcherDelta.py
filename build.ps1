@@ -1,1 +1,1 @@
-pyinstaller  --onefile --windowed --name=DeltaruneCozyInn --icon=cozyinn.ico mainwindow.py
+pyinstaller  --onefile --windowed --name=DeltaruneCozyInn --icon=ebeyshaya_iconka.ico mainwindow.py
