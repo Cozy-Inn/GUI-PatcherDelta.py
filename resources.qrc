@@ -10,6 +10,7 @@
         <file>resources/queen_sprite_error.png</file>
         <file>resources/ralsei_down.png</file>
         <file>resources/lytaya_animka_ralsei2009.gif</file>
+        <file>resources/mnogo_voprosoff_warning.png</file>
     </qresource>
     <qresource prefix="/icons">
         <file>resources/cozyinn.ico</file>

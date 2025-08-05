@@ -12,7 +12,7 @@ def is_admin():
 def show_admin_warning():
     msg = QMessageBox()
     msg.setIconPixmap(QPixmap(":/img/resources/queen_sprite.png"))
-    msg.setWindowTitle("Предупреждение")
+    msg.setWindowTitle("Программа запущена от имени администратора")
     msg.setWindowIcon(QPixmap(":/icon/resources/cozy_inn.ico"))
     msg.setText('<span style="font-size:12pt; font-weight: 600">Обратите внимание!<br>Программа запущена с правами администратора.</span>')
     msg.setInformativeText(
