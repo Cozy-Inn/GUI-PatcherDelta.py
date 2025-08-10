@@ -2,6 +2,7 @@ import subprocess
 import ctypes
 import tempfile
 import os
+import shutil
 from time import sleep
 def generate_copy_bat(config: dict, output_path: str = "copy_script.bat", stop_flag = "temp.flag", log_func=print):
     lines = ["@echo off", "chcp 65001 >nul", ""]
@@ -78,3 +79,45 @@ def copy_game_files_win(config, log_func=print):
     run_bat_with_fallback(bat_path, log_func)
     wait_for_done_flag(stop_flag, log_func)
     return bat_path
+
+def copy_game_files_mac(config, log_func=print):
+    """Копирование файлов для macOS"""
+    try:
+        # Копируем папки
+        for src, dst in config.get("folders", {}).items():
+            if os.path.exists(src):
+                log_func(f"Копируем содержимое папки {src} → {dst}")
+                
+                # Создаем целевую папку, если ее нет
+                os.makedirs(dst, exist_ok=True)
+                
+                # Копируем каждый элемент отдельно
+                for item in os.listdir(src):
+                    src_path = os.path.join(src, item)
+                    dst_path = os.path.join(dst, item)
+                    
+                    if os.path.isdir(src_path):
+                        if os.path.exists(dst_path):
+                            shutil.rmtree(dst_path)
+                        shutil.copytree(src_path, dst_path)
+                    else:
+                        shutil.copy2(src_path, dst_path)
+            else:
+                log_func(f"Источник не найден: {src}")
+                raise FileNotFoundError(f"Source folder not found: {src}")
+        
+        # Копируем отдельные файлы
+        for src, dst in config.get("files", {}).items():
+            if os.path.exists(src):
+                log_func(f"Копируем файл {src} → {dst}")
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copy2(src, dst)
+            else:
+                log_func(f"Файл не найден: {src}")
+                raise FileNotFoundError(f"Source file not found: {src}")
+                
+        return None
+        
+    except Exception as e:
+        log_func(f"Ошибка при копировании: {str(e)}")
+        raise RuntimeError(f"Copy error: {str(e)}") from e
