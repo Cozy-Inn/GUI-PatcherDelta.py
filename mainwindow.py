@@ -2,20 +2,20 @@ import sys
 import os
 import subprocess
 import threading
+import re
 import glob
 import shutil
 from pathlib import Path
 from time import sleep
+from copy_files import copy_game_files_win
+from copy_files import copy_game_files_mac
 from messageboxes import show_admin_warning, is_admin, show_critical_error
 
-if sys.platform.startswith("win"):
-    os.environ["QT_QPA_PLATFORM"] = "windows:darkmode=0"
-elif sys.platform.startswith("darwin"):
-    os.environ["QT_QPA_PLATFORM"] = "cocoa:darkmode=0"
+os.environ["QT_QPA_PLATFORM"] = "cocoa:darkmode=0"
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QFileDialog, QMessageBox
 from PySide6.QtGui import QPixmap, QMovie, QIcon
-from PySide6.QtCore import QObject, QEvent, Signal, QTimer
+from PySide6.QtCore import QObject, QEvent, Signal, QTimer, QUrl
 
 from ui_form import Ui_PatchWizard
 
@@ -29,7 +29,12 @@ def get_data_root():
     return data_root
 
 class State:
-    selected_folder = "/"
+    if sys.platform == "darwin":
+        # Путь по умолчанию для macOS
+        selected_folder = os.path.expanduser("~/Library/Application Support/Steam/steamapps/common/DELTARUNE/DELTARUNE.app/Contents/Resources")
+    else:
+        # Путь по умолчанию для Windows
+        selected_folder = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\DELTARUNE"
     is_patch_applied = False
 
 class MainWindow(QMainWindow):
@@ -51,8 +56,9 @@ class MainWindow(QMainWindow):
         }
 
         if (sys.platform.startswith("win")): 
-            from windows import search_deltarune_steam_installations_win
-            search_deltarune_steam_installations_win(self)
+            self.search_deltarune_steam_installations_win()
+        elif (sys.platform.startswith("darwin")): 
+            self.search_deltarune_steam_installations_mac()
         
         self.goTo("intro")
 
@@ -90,6 +96,22 @@ class MainWindow(QMainWindow):
         self.bin_folder = os.path.join(self.data_root, 'bin')
         self.patch_folder = os.path.join(self.data_root, 'patch')
 
+        if sys.platform == "darwin":
+            patcher_path = os.path.join(self.bin_folder, "mac", "GMS-UTML-Patcher")
+            if os.path.exists(patcher_path):
+                try:
+                    os.chmod(patcher_path, 0o755)  # Даем права на выполнение
+                    self.sendVerbose(f"Установлены права на выполнение для {patcher_path}")
+                except Exception as e:
+                    self.sendVerbose(f"Ошибка при установке прав: {e}")
+            lib_path = os.path.join(self.bin_folder, "mac", "Magick.Native-Q8-x64.dll.dylib")
+            if os.path.exists(lib_path):
+                try:
+                    os.chmod(lib_path, 0o755)  # Даем права на выполнение
+                    self.sendVerbose(f"Установлены права на выполнение для {lib_path}")
+                except Exception as e:
+                    self.sendVerbose(f"Ошибка при установке прав: {e}")
+
         if not os.path.isdir(self.bin_folder) or not os.path.isdir(self.patch_folder):
             show_critical_error("Отсутствуют необходимые для установщика папки.", "Отсутвует папка <code>data</code>, <code>data/bin</code> или <code>data/patch</code>")
             sys.exit(0)
@@ -114,6 +136,8 @@ class MainWindow(QMainWindow):
         self.ui.dead_image.setMovie(ralsei)
         ralsei.start()
 
+
+
     def on_finish_clicked(self):
         if self.ui.startDELTA.isChecked():
             self.launch_deltarune()
@@ -130,13 +154,19 @@ class MainWindow(QMainWindow):
                 else:
                     print("Файл DELTARUNE.exe не найден")
             elif sys.platform == "darwin":
-                # ADD MAC SUPPORT HERE
-                app_path = os.path.join(State.selected_folder, "DELTARUNE.app")
+                # Если путь заканчивается на "Contents/Resources", поднимаемся на 2 уровня вверх
+                path = Path(State.selected_folder)
+                if path.parts[-2:] == ("Contents", "Resources"):
+                    app_path = str(path.parent.parent)  # Получаем путь к .app
+                else:
+                    app_path = os.path.join(State.selected_folder, "DELTARUNE.app")
+
                 if os.path.exists(app_path):
                     command = ["open", app_path]
-                    subprocess.Popen(command, cwd=State.selected_folder)
+                    subprocess.Popen(command)
+                    print(f"Запускаем игру из: {app_path}")
                 else:
-                    print("Файл DELTARUNE.app не найден")
+                    print(f"Файл DELTARUNE.app не найден по пути: {app_path}")
         except Exception as e:
             print(f"Ошибка при запуске игры: {e}")
 
@@ -159,25 +189,54 @@ class MainWindow(QMainWindow):
             print(f"Файл {filename} не найден.")
         return None
 
+    def fix_mac_permissions(self, file_path):
+        """Убирает quarantine атрибут и дает права на выполнение"""
+        try:
+            # Удаляем quarantine атрибут
+            subprocess.run(["xattr", "-d", "com.apple.quarantine", file_path], 
+                        check=True, stderr=subprocess.DEVNULL)
+            
+            # Даем права на выполнение
+            subprocess.run(["chmod", "+x", file_path], 
+                        check=True, stderr=subprocess.DEVNULL)
+            
+            return True
+        except subprocess.CalledProcessError:
+            return False
+
 
     def checkDELTARUNE(self, folder_path):
-        if sys.platform.startswith("win"):
-            for chapter in range(1, 5):
+        # Проверяем, является ли это папкой Resources внутри .app
+        path = Path(folder_path)
+        if sys.platform == "darwin" and path.parts[-2:] == ("Contents", "Resources"):
+            # Ищем родительский .app
+            app_path = path.parent.parent
+            if app_path.suffix == ".app" and app_path.is_dir():
+                folder_path = str(app_path)
+        
+        for chapter in range(1, 5):
+            if sys.platform == "darwin":
+                chapter_dirs = glob.glob(os.path.join(folder_path, "Contents", "Resources", f"chapter{chapter}*"))
+            else:
                 chapter_dirs = glob.glob(os.path.join(folder_path, f"chapter{chapter}*"))
-                if not chapter_dirs:
-                    return False
-                found_data = False
-                for ch_dir in chapter_dirs:
+            
+            if not chapter_dirs:
+                return False
+            
+            found_data = False
+            for ch_dir in chapter_dirs:
+                if sys.platform == "darwin":
+                    data_files = glob.glob(os.path.join(ch_dir, "game.*"))
+                else:
                     data_files = glob.glob(os.path.join(ch_dir, "data.*"))
-                    if any(os.path.isfile(path) for path in data_files):
-                        found_data = True
-                        break
-                if not found_data:
-                    return False
-            return True
-        elif sys.platform.startswith("darwin"):
-            # ADD MAC SUPPORT HERE
-            return False
+                
+                if any(os.path.isfile(path) for path in data_files):
+                    found_data = True
+                    break
+            
+            if not found_data:
+                return False
+        return True
 
     def get_free_space_mb(self, path):
         try:
@@ -234,8 +293,7 @@ class MainWindow(QMainWindow):
                     with open(file, "r", encoding="utf-8") as f:
                         content = f.read().lower()
                         if "steam" in content:
-                            from windows import search_deltarune_steam_installations_win
-                            folder_path = search_deltarune_steam_installations_win(self)
+                            folder_path = self.search_deltarune_steam_installations_win()
                         else:
                             self.sendVerbose("Получен .url, но не steam")
                             print("Получен .url, но не steam")
@@ -246,31 +304,57 @@ class MainWindow(QMainWindow):
                 # предположим что это папка
                 folder_path = file
         elif sys.platform == "darwin":
-            # ADD MAC SUPPORT HERE
             path = Path(file)
+            # Если перетащили сам .app
             if path.suffix == ".app" and path.is_dir():
-                folder_path = str(path)
-                self.sendVerbose(f"Папка с .app: {folder_path}")
-                print("Папка с .app:", folder_path)
+                resources_path = path / "Contents" / "Resources"
+                if resources_path.exists():
+                    icons_path = resources_path / "shortcut.icns"
+                    if icons_path.exists():
+                        resources_path = self.search_deltarune_steam_installations_mac()
+                    folder_path = str(resources_path)
+                    self.sendVerbose(f"Папка Resources найдена: {folder_path}")
+                    print(f"Папка Resources найдена: {folder_path}")
+                else:
+                    folder_path = str(path)
+                    self.sendVerbose(f"Папка Resources не найдена, используем .app: {folder_path}")
+                    print(f"Папка Resources не найдена, используем .app: {folder_path}")
+            # Если перетащили что-то внутри .app
             else:
+                # Ищем .app в родительских папках
                 app_path = None
                 for parent in path.parents:
                     if parent.suffix == ".app" and parent.is_dir():
                         app_path = parent
                         break
+                
                 if app_path:
-                    folder_path = str(app_path)
-                    self.sendVerbose(f"Найден .app в родителях: {folder_path}")
+                    resources_path = app_path / "Contents" / "Resources"
+                    if resources_path.exists():
+                        folder_path = str(resources_path)
+                        self.sendVerbose(f"Найден .app в родителях с Resources: {folder_path}")
+                        print(f"Найден .app в родителях с Resources: {folder_path}")
+                    else:
+                        folder_path = str(app_path)
+                        self.sendVerbose(f"Найден .app без Resources: {folder_path}")
+                        print(f"Найден .app без Resources: {folder_path}")
                 else:
+                    # Проверяем, существует ли .app с таким же именем
                     app_candidate = path.with_suffix(".app")
                     if app_candidate.is_dir():
-                        folder_path = str(app_candidate)
-                        self.sendVerbose(f"Добавлен .app к пути: {folder_path}")
-                        print("Добавлен .app к пути:", folder_path)
+                        resources_path = app_candidate / "Contents" / "Resources"
+                        if resources_path.exists():
+                            folder_path = str(resources_path)
+                            self.sendVerbose(f"Добавлен .app к пути с Resources: {folder_path}")
+                            print(f"Добавлен .app к пути с Resources: {folder_path}")
+                        else:
+                            folder_path = str(app_candidate)
+                            self.sendVerbose(f"Добавлен .app без Resources: {folder_path}")
+                            print(f"Добавлен .app без Resources: {folder_path}")
                     else:
                         folder_path = str(path)
                         self.sendVerbose(f"Просто используем переданный путь: {folder_path}")
-                        print("Просто используем переданный путь:", folder_path)
+                        print(f"Просто используем переданный путь: {folder_path}")
         else:
             print(f"Неподдерживаемая платформа: {sys.platform}")
         self.select_folder(folder_path)
@@ -328,6 +412,123 @@ class MainWindow(QMainWindow):
             self.ui.pathField.setText(text)
             self.select_folder(text)
 
+    def search_deltarune_steam_installations_win(self):
+        def get_steam_path_from_registry():
+            try:
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam") as key:
+                    steam_path, _ = winreg.QueryValueEx(key, "SteamPath")
+                    return steam_path
+            except FileNotFoundError:
+                return None
+
+        def get_steam_library_paths(steam_path):
+            paths = [os.path.join(steam_path, "steamapps", "common")]
+            vdf_path = os.path.join(steam_path, "steamapps", "libraryfolders.vdf")
+
+            if not os.path.exists(vdf_path):
+                return paths
+
+            try:
+                with open(vdf_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                matches = re.findall(r'"\d+"\s*\{([^}]+)\}', content, re.MULTILINE | re.DOTALL)
+
+                for block in matches:
+                    path_match = re.search(r'"path"\s+"([^"]+)"', block)
+                    if path_match:
+                        raw_path = path_match.group(1)
+                        try:
+                            fixed_path = os.path.abspath(os.path.normpath(raw_path))
+                            if os.path.exists(fixed_path):
+                                lib_path = os.path.join(fixed_path, "steamapps", "common")
+                                if os.path.exists(lib_path):
+                                    paths.append(os.path.realpath(lib_path))
+                                else:
+                                    print(f"[WARN] Папка steamapps/common не найдена в: {fixed_path}")
+                            else:
+                                print(f"[WARN] Путь не существует: {raw_path} → {fixed_path}")
+                        except Exception as e:
+                            print(f"[ERROR] Ошибка обработки пути '{raw_path}': {str(e)}")
+            except Exception as e:
+                self.sendVerbose(f"[ERROR] Ошибка при чтении libraryfolders.vdf: {e}")
+                print(f"[ERROR] Ошибка при чтении libraryfolders.vdf: {e}")
+
+            return paths
+
+
+        steam_path = get_steam_path_from_registry()
+        if not steam_path:
+            self.sendVerbose("[ERROR] Steam не найден в реестре.")
+            print("[ERROR] Steam не найден в реестре.")
+            return []
+
+        library_paths = get_steam_library_paths(steam_path)
+
+        found_count = 0
+        for lib_path in library_paths:
+            if not os.path.exists(lib_path):
+                continue
+
+            for folder in os.listdir(lib_path):
+                full_path = str(Path(os.path.join(lib_path, folder)).resolve(strict=False))
+                if os.path.isdir(full_path):
+                    if self.checkDELTARUNE(full_path):
+                        self.sendVerbose(f"[FOUND] Найдена Deltarune: {full_path}")
+                        print(f"[FOUND] Найдена Deltarune: {full_path}")
+                        self.select_folder(full_path)
+                        return full_path
+        if found_count == 0:
+            self.sendVerbose("[ERROR] Deltarune не найдена ни в одной из библиотек.")
+            print("[ERROR] Deltarune не найдена ни в одной из библиотек.")
+
+    def search_deltarune_steam_installations_mac(self):
+        """Поиск установленной через Steam игры DELTARUNE на macOS"""
+        steam_paths = [
+            os.path.expanduser("~/Library/Application Support/Steam"),  # Основная папка Steam
+            "/Applications/Steam.app/Contents/MacOS/steamapps"  # Альтернативное расположение
+        ]
+        
+        # Дополнительные возможные пути библиотек Steam
+        library_folders = []
+        for steam_path in steam_paths:
+            if os.path.exists(steam_path):
+                # Проверяем файл libraryfolders.vdf
+                vdf_path = os.path.join(steam_path, "steamapps", "libraryfolders.vdf")
+                if os.path.exists(vdf_path):
+                    try:
+                        with open(vdf_path, "r", encoding="utf-8") as f:
+                            content = f.read()
+                        # Ищем пути в libraryfolders.vdf
+                        matches = re.findall(r'"path"\s+"([^"]+)"', content)
+                        for match in matches:
+                            lib_path = os.path.join(match, "steamapps", "common")
+                            if os.path.exists(lib_path):
+                                library_folders.append(lib_path)
+                    except Exception as e:
+                        self.sendVerbose(f"Ошибка чтения libraryfolders.vdf: {e}")
+                        print(f"Ошибка чтения libraryfolders.vdf: {e}")
+        
+        # Проверяем все возможные пути
+        for lib_path in library_folders + [os.path.join(p, "steamapps", "common") for p in steam_paths]:
+            if not os.path.exists(lib_path):
+                continue
+                    
+            # Проверяем .app версию
+            deltarune_app = os.path.join(lib_path, "DELTARUNE", "DELTARUNE.app")
+            if os.path.exists(deltarune_app):
+                resources_path = os.path.join(deltarune_app, "Contents", "Resources")
+                if os.path.exists(resources_path):
+                    if self.checkDELTARUNE(resources_path):
+                        self.sendVerbose(f"Найдена Deltarune.app: {deltarune_app}")
+                        print(f"Найдена Deltarune.app: {deltarune_app}")
+                        self.select_folder(resources_path)
+                        return resources_path
+        
+        self.sendVerbose("Deltarune не найдена в Steam-библиотеках")
+        print("Deltarune не найдена в Steam-библиотеках")
+        return None
+
+    # update percentage
     def smoothPercentage(self, newPercent, title):
         self.sendVerbose(title)
         self.target_progress = int(newPercent)
@@ -348,7 +549,10 @@ class MainWindow(QMainWindow):
         self.ui.install_percentage.setText(f"{self.current_progress}%")
         self.ui.install_status.setText(self.status_text)
 
+    # STARTING PATCHING FROM HERE
     def start_patching_async(self):
+
+
         def handle_confirmation(error_code, callback):
             msg = QMessageBox()
             msg.setWindowTitle("Внимание!")
@@ -377,7 +581,6 @@ class MainWindow(QMainWindow):
 
         def patching_task():
             if sys.platform.startswith("win"):
-                from copy_files import copy_game_files_win
                 patcher_exe = os.path.join(self.data_root, "bin", "win", "GMS-UTML-Patcher.exe")
                 try:
                     self.progressRequested.emit(15, "Патчим выбор главы...")
@@ -505,21 +708,29 @@ class MainWindow(QMainWindow):
                     self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
                     self.ui.nextBtn_install.setEnabled(True)
             elif sys.platform == "darwin":
-                # ADD MAC SUPPORT HERE
                 patcher_bin = os.path.join(self.data_root, "bin", "mac", "GMS-UTML-Patcher")
                 try:
+                    if not os.path.exists(patcher_bin):
+                        raise FileNotFoundError(f"Файл патчера не найден: {patcher_bin}")
+
+                    # try:
+                    #     subprocess.run(["xattr", "-d", "com.apple.quarantine", patcher_bin], check=True)
+                    #     subprocess.run(["chmod", "755", patcher_bin], check=True)
+                    # except subprocess.CalledProcessError as e:
+                    #     self.sendVerbose(f"Не удалось исправить права: {e}")
+
                     self.progressRequested.emit(15, "Патчим выбор главы...")
                     
-                    original_data_sel = os.path.join(State.selected_folder, "data.ios")
+                    original_data_sel = os.path.join(State.selected_folder, "game.ios")
                     patch_file_sel = os.path.join(self.patch_folder, "ch_sel", "data.json")
-                    result_data_sel = os.path.join(self.patch_folder, "data_sel.ios")
+                    result_data_sel = os.path.join(self.patch_folder, "game_sel.ios")
                     try:
                         subprocess.run([
                             patcher_bin,
                             "--data-path", original_data_sel,
                             "--patcher-file", patch_file_sel,
                             "--output", result_data_sel
-                        ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                        ], check=True)
                     except subprocess.CalledProcessError as e:
                         if e.returncode in (203, 204):
                             from threading import Event
@@ -540,14 +751,85 @@ class MainWindow(QMainWindow):
                                 self.ui.nextBtn_install.setEnabled(True)
                                 return
                             subprocess.run([
-                                patcher_exe,
+                                patcher_bin,
                                 "--data-path", original_data_sel,
                                 "--patcher-file", patch_file_sel,
                                 "--skip-timecheck",
                                 "--output", result_data_sel
-                            ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                            ], check=True)
                         else:
                             raise
+                    self.progressRequested.emit(30, "Выбор главы пропатчен")
+
+                    self.progressRequested.emit(30, "Патчим третью главу...")
+                    original_ch3_data = os.path.join(State.selected_folder, "chapter3_mac", "game.ios")
+                    ch3_patch = os.path.join(self.patch_folder, "ch3", "data3.json")
+                    result_data_3 = os.path.join(self.patch_folder, "game_3.ios")
+                    try:
+                        subprocess.run([
+                            patcher_bin,
+                            "--data-path", original_ch3_data,
+                            "--patcher-file", ch3_patch,
+                            "--output", result_data_3
+                        ], check=True)
+                    except subprocess.CalledProcessError as e:
+                        if e.returncode in (203, 204):
+                            from threading import Event
+                            event = Event()
+                            user_choice = [None]
+
+                            def callback(result):
+                                user_choice[0] = result
+                                event.set()
+                            self.confirmation_requested.emit(e.returncode, callback)
+
+                            event.wait(180)
+
+                            if not user_choice[0]:
+                                self.progressRequested.emit(0, "Установка отменена")
+                                self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
+                                self.ui.error.setText("Отмена пользователем")
+                                self.ui.nextBtn_install.setEnabled(True)
+                                return
+                            subprocess.run([
+                                patcher_bin,
+                                "--data-path", original_ch3_data,
+                                "--patcher-file", ch3_patch,
+                                "--skip-timecheck",
+                                "--output", result_data_3
+                            ], check=True)
+                        else:
+                            raise
+
+                    self.progressRequested.emit(70, "Третья глава пропатчена")
+
+                    self.progressRequested.emit(70, "Копируем файлы...")
+                    src_dir = os.path.join(self.patch_folder, "copy", "chapter3")
+                    dest_dir = os.path.join(State.selected_folder, "chapter3_mac")
+
+                    copy_config = { "folders": {}, "files": {}}
+
+                    copy_config["folders"][src_dir] = dest_dir
+                    copy_config["files"][result_data_3] = original_ch3_data
+                    copy_config["files"][result_data_sel] = original_data_sel
+
+                    copy_game_files_mac(copy_config, self.sendVerbose)
+
+                    self.progressRequested.emit(95, "Удаляем временные файлы...")
+
+                    temp_files = [
+                        result_data_sel,
+                        result_data_3
+                    ]
+                    for temp_file in temp_files:
+                        try:
+                            if os.path.exists(temp_file):
+                                os.remove(temp_file)
+                        except Exception as e:
+                            print(f"Не удалось удалить временный файл {temp_file}: {e}")
+
+                    self.progressRequested.emit(100, "Патчинг завершён!")
+                    self.ui.nextBtn_install.setEnabled(True)
                 except Exception as e:
                     error_msg = str(e)
                     print(f"Ошибка установки: {error_msg}")
