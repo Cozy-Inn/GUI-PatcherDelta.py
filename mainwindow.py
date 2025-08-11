@@ -11,7 +11,10 @@ from copy_files import copy_game_files_win
 from copy_files import copy_game_files_mac
 from messageboxes import show_admin_warning, is_admin, show_critical_error
 
-os.environ["QT_QPA_PLATFORM"] = "cocoa:darkmode=0"
+if sys.platform.startswith("win"):
+    os.environ["QT_QPA_PLATFORM"] = "windows:darkmode=0"
+else:
+    os.environ["QT_QPA_PLATFORM"] = "cocoa:darkmode=0"
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QFileDialog, QMessageBox
 from PySide6.QtGui import QPixmap, QMovie, QIcon
@@ -415,6 +418,7 @@ class MainWindow(QMainWindow):
     def search_deltarune_steam_installations_win(self):
         def get_steam_path_from_registry():
             try:
+                import winreg
                 with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam") as key:
                     steam_path, _ = winreg.QueryValueEx(key, "SteamPath")
                     return steam_path
@@ -551,18 +555,26 @@ class MainWindow(QMainWindow):
 
     # STARTING PATCHING FROM HERE
     def start_patching_async(self):
-
+        warn_msg_shown = False
 
         def handle_confirmation(error_code, callback):
+            nonlocal warn_msg_shown
+            if warn_msg_shown: 
+                return callback(True)
+            warn_msg_shown = True
+
             msg = QMessageBox()
             msg.setWindowTitle("Внимание!")
             msg.setIconPixmap(QPixmap(":/img/resources/mnogo_voprosoff_warning.png"))
 
             yes_btn = msg.addButton("Продолжить", QMessageBox.AcceptRole)
             no_btn = msg.addButton("Отменить", QMessageBox.RejectRole)
-            if error_code == 203:
+            if error_code == 206:
+                msg.setText('<span style="font-size:12pt; font-weight: 600">Ваша версия игры устарела!</span>')
+                msg.setInformativeText("Если вы продолжите установку, то игра почти гарантированно не будет работать!\nВсё равно продолжить установку?")
+            elif error_code == 205:
                 msg.setText('<span style="font-size:12pt; font-weight: 600">Версия перевода неактуальна!</span>')
-                msg.setInformativeText("Хотите продолжить установку?")
+                msg.setInformativeText("Если вы продолжите установку, то игра почти гарантированно не будет работать!\nВсё равно продолжить установку?")
             elif error_code == 204:
                 msg.setText('<span style="font-size:12pt; font-weight: 600">Обнаружена модификация!</span>')
                 msg.setInformativeText("Возможно вы уже установили перевод. Всё равно продолжить?")
@@ -596,7 +608,7 @@ class MainWindow(QMainWindow):
                             "--output", result_data_sel
                         ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
                     except subprocess.CalledProcessError as e:
-                        if e.returncode in (203, 204):
+                        if e.returncode in (204, 205, 206):
                             from threading import Event
                             event = Event()
                             user_choice = [None]
@@ -637,7 +649,9 @@ class MainWindow(QMainWindow):
                             "--output", result_data_3
                         ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
                     except subprocess.CalledProcessError as e:
-                        if e.returncode in (203, 204):
+                        if e.returncode in (204, 205, 206):
+                            print(e.returncode)
+                            from threading import Event
                             event = Event()
                             user_choice = [None]
 
