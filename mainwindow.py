@@ -18,7 +18,7 @@ else:
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QFileDialog, QMessageBox
 from PySide6.QtGui import QPixmap, QMovie, QIcon
-from PySide6.QtCore import QObject, QEvent, Signal, QTimer, QUrl
+from PySide6.QtCore import QObject, QEvent, Signal, QTimer, Qt, QMetaObject 
 
 from ui_form import Ui_PatchWizard
 
@@ -71,7 +71,7 @@ class MainWindow(QMainWindow):
         self.ui.pathField.textChanged.connect(self.path_input_update)
         self.ui.dropFrame.default_drop_label = """<div style="text-align: center; width: 100%;"><span style="color: rgba(98, 98, 98, 1);">Перетащите иконку игры, чтобы указать путь к папке</span></div>"""
         self.ui.dropFrame.default_classic_mode_label = """<div style="text-align: center; width: 100%;"><a href="#">Не работает? Классический режим</a></div>\n"""
-
+        
         # navigations
         self.ui.nextBtn_intro.clicked.connect(lambda: self.goTo("drop_link"))
         self.ui.nextBtn_path.clicked.connect(lambda: self.goTo("installation"))
@@ -129,7 +129,7 @@ class MainWindow(QMainWindow):
         self.timer = QTimer()
         self.timer.timeout.connect(self._tick)
         self.timer.setInterval(5)
-        self.progressRequested.connect(self.smoothPercentage)
+        self.progressRequested.connect(self.smoothPercentage, Qt.QueuedConnection)
 
         self.ui.detailedlogs.setVisible(False)
         self.ui.showDetailsBtn.clicked.connect(lambda: self.ui.detailedlogs.setVisible(not self.ui.detailedlogs.isVisible()))
@@ -139,7 +139,8 @@ class MainWindow(QMainWindow):
         self.ui.dead_image.setMovie(ralsei)
         ralsei.start()
 
-
+    def invoke_gui(self, fn, *args, **kwargs):
+        QTimer.singleShot(0, lambda: fn(*args, **kwargs))
 
     def on_finish_clicked(self):
         if self.ui.startDELTA.isChecked():
@@ -411,7 +412,7 @@ class MainWindow(QMainWindow):
             self.select_folder(folder)
 
     def path_input_update(self, text):
-        if text:
+        if text and text != State.selected_folder:
             self.ui.pathField.setText(text)
             self.select_folder(text)
 
@@ -549,6 +550,8 @@ class MainWindow(QMainWindow):
             self.timer.stop()
 
     def updateProgress(self):
+        if threading.current_thread() is not threading.main_thread():
+            return QMetaObject.invokeMethod(self, lambda: self.updateProgress(), Qt.QueuedConnection)
         self.progress_changed.emit(self.current_progress)
         self.ui.install_percentage.setText(f"{self.current_progress}%")
         self.ui.install_status.setText(self.status_text)
@@ -589,7 +592,7 @@ class MainWindow(QMainWindow):
             result = msg.clickedButton() == yes_btn
             callback(result)
 
-        self.confirmation_requested.connect(handle_confirmation)
+        self.confirmation_requested.connect(handle_confirmation, Qt.QueuedConnection)
 
         def patching_task():
             if sys.platform.startswith("win"):
@@ -622,9 +625,9 @@ class MainWindow(QMainWindow):
 
                             if not user_choice[0]:
                                 self.progressRequested.emit(0, "Установка отменена")
-                                self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
-                                self.ui.error.setText("Отмена пользователем")
-                                self.ui.nextBtn_install.setEnabled(True)
+                                self.invoke_gui(self.ui.nextBtn_install.clicked.connect, lambda: self.goTo("end_fail"))
+                                self.invoke_gui(self.ui.error.setText, "Отмена пользователем")
+                                self.invoke_gui(self.ui.nextBtn_install.setEnabled, True)
                                 return
                             subprocess.run([
                                 patcher_exe,
@@ -664,9 +667,9 @@ class MainWindow(QMainWindow):
 
                             if not user_choice[0]:
                                 self.progressRequested.emit(0, "Установка отменена")
-                                self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
-                                self.ui.error.setText("Отмена пользователем")
-                                self.ui.nextBtn_install.setEnabled(True)
+                                self.invoke_gui(self.ui.nextBtn_install.clicked.connect, lambda: self.goTo("end_fail"))
+                                self.invoke_gui(self.ui.error.setText, "Отмена пользователем")
+                                self.invoke_gui(self.ui.nextBtn_install.setEnabled, True)
                                 return
                             subprocess.run([
                                 patcher_exe,
@@ -691,7 +694,7 @@ class MainWindow(QMainWindow):
                     copy_config["files"][result_data_sel] = original_data_sel
 
                     bat_file = copy_game_files_win(
-                        copy_config, self.sendVerbose
+                        copy_config, lambda msg: self.invoke_gui(lambda: self.sendVerbose(msg))
                     )
 
                     self.progressRequested.emit(95, "Удаляем временные файлы...")
@@ -760,9 +763,9 @@ class MainWindow(QMainWindow):
 
                             if not user_choice[0]:
                                 self.progressRequested.emit(0, "Установка отменена")
-                                self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
-                                self.ui.error.setText("Отмена пользователем")
-                                self.ui.nextBtn_install.setEnabled(True)
+                                self.invoke_gui(self.ui.nextBtn_install.clicked.connect, lambda: self.goTo("end_fail"))
+                                self.invoke_gui(self.ui.error.setText, "Отмена пользователем")
+                                self.invoke_gui(self.ui.nextBtn_install.setEnabled, True)
                                 return
                             subprocess.run([
                                 patcher_bin,
@@ -801,9 +804,9 @@ class MainWindow(QMainWindow):
 
                             if not user_choice[0]:
                                 self.progressRequested.emit(0, "Установка отменена")
-                                self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
-                                self.ui.error.setText("Отмена пользователем")
-                                self.ui.nextBtn_install.setEnabled(True)
+                                self.invoke_gui(self.ui.nextBtn_install.clicked.connect, lambda: self.goTo("end_fail"))
+                                self.invoke_gui(self.ui.error.setText, "Отмена пользователем")
+                                self.invoke_gui(self.ui.nextBtn_install.setEnabled, True)
                                 return
                             subprocess.run([
                                 patcher_bin,
@@ -827,7 +830,10 @@ class MainWindow(QMainWindow):
                     copy_config["files"][result_data_3] = original_ch3_data
                     copy_config["files"][result_data_sel] = original_data_sel
 
-                    copy_game_files_mac(copy_config, self.sendVerbose)
+                    copy_game_files_mac(
+                        copy_config, 
+                        lambda msg: self.invoke_gui(lambda: self.sendVerbose(msg))
+                    )
 
                     self.progressRequested.emit(95, "Удаляем временные файлы...")
 
