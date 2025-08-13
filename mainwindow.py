@@ -749,7 +749,7 @@ class MainWindow(QMainWindow):
                             "--output", result_data_sel
                         ], check=True)
                     except subprocess.CalledProcessError as e:
-                        if e.returncode in (203, 204):
+                        if e.returncode in (204, 205, 206):
                             from threading import Event
                             event = Event()
                             user_choice = [None]
@@ -790,7 +790,7 @@ class MainWindow(QMainWindow):
                             "--output", result_data_3
                         ], check=True)
                     except subprocess.CalledProcessError as e:
-                        if e.returncode in (203, 204):
+                        if e.returncode in (204, 205, 206):
                             from threading import Event
                             event = Event()
                             user_choice = [None]
