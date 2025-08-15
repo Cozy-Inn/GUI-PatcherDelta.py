@@ -18,9 +18,7 @@ else:
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QFileDialog, QMessageBox
 from PySide6.QtGui import QPixmap, QMovie, QIcon
-from PySide6.QtCore import QObject, QEvent, Signal, QTimer, Qt, QMetaObject 
-
-from ui_form import Ui_PatchWizard
+from PySide6.QtCore import QObject, QEvent, Signal, QTimer, Qt, QMetaObject
 
 def get_data_root():
     if getattr(sys, 'frozen', False):
@@ -32,12 +30,15 @@ def get_data_root():
     return data_root
 
 class State:
+    selected_folder = ""
     if sys.platform == "darwin":
         # Путь по умолчанию для macOS
         selected_folder = os.path.expanduser("~/Library/Application Support/Steam/steamapps/common/DELTARUNE/DELTARUNE.app/Contents/Resources")
     else:
         # Путь по умолчанию для Windows
-        selected_folder = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\DELTARUNE"
+        selected_folder = os.path.join(
+            "C:\\", "Program Files (x86)", "Steam", "steamapps", "common", "DELTARUNE"
+        )
     is_patch_applied = False
 
 class MainWindow(QMainWindow):
@@ -46,7 +47,15 @@ class MainWindow(QMainWindow):
     progressRequested = Signal(int, str)
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.ui = Ui_PatchWizard()
+
+        # импорты перенесены сюда дабы оптимизировать пространство и время загрузки
+        if sys.platform.startswith("win"):
+            from ui_form import Ui_PatchWizard as Ui_PatchWizardWin
+            self.ui = Ui_PatchWizardWin()
+        else:
+            from ui_form_mac import Ui_PatchWizard as Ui_PatchWizardMac
+            self.ui = Ui_PatchWizardMac()
+
         self.ui.setupUi(self)
 
         self.pages = {
@@ -720,7 +729,6 @@ class MainWindow(QMainWindow):
                     self.ui.error.setText(error_msg)
                     self.ui.detailedlogs.setVisible(True)
                     self.ui.dead_image.setPixmap(QPixmap(":/img/resources/ralsei_down.png"))
-                    
 
                     self.ui.nextBtn_install.clicked.connect(lambda: self.goTo("end_fail"))
                     self.ui.nextBtn_install.setEnabled(True)
