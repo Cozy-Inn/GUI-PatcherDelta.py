@@ -530,7 +530,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>4</number>
+     <number>5</number>
     </property>
     <widget class="QWidget" name="intro">
      <widget class="QPushButton" name="nextBtn_intro">
@@ -566,7 +566,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>11</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="text">
@@ -603,7 +603,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>11</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="text">
@@ -658,7 +658,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>14</pointsize>
+        <pointsize>19</pointsize>
         <italic>false</italic>
         <stylestrategy>PreferDefault</stylestrategy>
         <hintingpreference>PreferFullHinting</hintingpreference>
@@ -698,7 +698,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>11</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="text">
@@ -744,7 +744,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>11</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="text">
@@ -792,7 +792,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>11</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="text">
@@ -816,7 +816,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>14</pointsize>
+        <pointsize>19</pointsize>
         <italic>false</italic>
         <stylestrategy>PreferDefault</stylestrategy>
         <hintingpreference>PreferFullHinting</hintingpreference>
@@ -878,7 +878,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>11</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="text">
@@ -998,7 +998,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>14</pointsize>
+        <pointsize>19</pointsize>
         <italic>false</italic>
         <stylestrategy>PreferDefault</stylestrategy>
         <hintingpreference>PreferFullHinting</hintingpreference>
@@ -1038,7 +1038,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>11</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="text">
@@ -1078,7 +1078,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>11</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="text">
@@ -1111,7 +1111,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>11</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="text">
@@ -1132,7 +1132,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>11</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="text">
@@ -1207,7 +1207,7 @@
        </property>
        <property name="font">
         <font>
-         <pointsize>12</pointsize>
+         <pointsize>15</pointsize>
          <stylestrategy>PreferAntialias</stylestrategy>
          <hintingpreference>PreferFullHinting</hintingpreference>
          <fontweight>DemiBold</fontweight>
@@ -1363,7 +1363,7 @@
        </property>
        <property name="font">
         <font>
-         <pointsize>10</pointsize>
+         <pointsize>13</pointsize>
         </font>
        </property>
        <property name="text">
@@ -1382,7 +1382,7 @@
        </property>
        <property name="font">
         <font>
-         <pointsize>10</pointsize>
+         <pointsize>13</pointsize>
         </font>
        </property>
        <property name="text">
@@ -1418,7 +1418,7 @@
        <rect>
         <x>50</x>
         <y>91</y>
-        <width>100</width>
+        <width>113</width>
         <height>16</height>
        </rect>
       </property>
@@ -1458,7 +1458,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="text">
@@ -1476,7 +1476,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="text">
@@ -1486,15 +1486,15 @@
      <widget class="QLabel" name="space_need_drop">
       <property name="geometry">
        <rect>
-        <x>150</x>
+        <x>170</x>
         <y>275</y>
-        <width>341</width>
+        <width>321</width>
         <height>21</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="text">
@@ -1504,15 +1504,15 @@
      <widget class="QLabel" name="space_available_drop">
       <property name="geometry">
        <rect>
-        <x>150</x>
+        <x>170</x>
         <y>294</y>
-        <width>341</width>
+        <width>321</width>
         <height>21</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="text">
@@ -1581,7 +1581,7 @@
        </property>
        <property name="font">
         <font>
-         <pointsize>12</pointsize>
+         <pointsize>15</pointsize>
          <stylestrategy>PreferAntialias</stylestrategy>
          <hintingpreference>PreferFullHinting</hintingpreference>
          <fontweight>DemiBold</fontweight>
@@ -1869,7 +1869,7 @@
        </property>
        <property name="font">
         <font>
-         <pointsize>12</pointsize>
+         <pointsize>15</pointsize>
          <stylestrategy>PreferAntialias</stylestrategy>
          <hintingpreference>PreferFullHinting</hintingpreference>
          <fontweight>DemiBold</fontweight>
@@ -1891,9 +1891,9 @@
        <property name="font">
         <font>
          <pointsize>12</pointsize>
+         <bold>true</bold>
          <stylestrategy>PreferAntialias</stylestrategy>
          <hintingpreference>PreferFullHinting</hintingpreference>
-         <fontweight>DemiBold</fontweight>
         </font>
        </property>
        <property name="text">
@@ -1925,7 +1925,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>14</pointsize>
        </font>
       </property>
       <property name="text">
@@ -2070,7 +2070,7 @@
        <rect>
         <x>40</x>
         <y>170</y>
-        <width>100</width>
+        <width>113</width>
         <height>16</height>
        </rect>
       </property>
@@ -2092,7 +2092,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="text">
@@ -2102,15 +2102,15 @@
      <widget class="QLabel" name="space_available_path">
       <property name="geometry">
        <rect>
-        <x>150</x>
+        <x>170</x>
         <y>294</y>
-        <width>341</width>
+        <width>321</width>
         <height>21</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="text">
@@ -2131,7 +2131,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="text">
@@ -2141,15 +2141,15 @@
      <widget class="QLabel" name="space_need_path">
       <property name="geometry">
        <rect>
-        <x>150</x>
+        <x>170</x>
         <y>275</y>
-        <width>341</width>
+        <width>321</width>
         <height>21</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>13</pointsize>
        </font>
       </property>
       <property name="text">
