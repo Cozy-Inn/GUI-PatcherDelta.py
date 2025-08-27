@@ -738,11 +738,11 @@ class MainWindow(QMainWindow):
                     if not os.path.exists(patcher_bin):
                         raise FileNotFoundError(f"Файл патчера не найден: {patcher_bin}")
 
-                    # try:
-                    #     subprocess.run(["xattr", "-d", "com.apple.quarantine", patcher_bin], check=True)
-                    #     subprocess.run(["chmod", "755", patcher_bin], check=True)
-                    # except subprocess.CalledProcessError as e:
-                    #     self.sendVerbose(f"Не удалось исправить права: {e}")
+                    try:
+                        subprocess.run(["xattr", "-d", "com.apple.quarantine", patcher_bin], check=True)
+                        subprocess.run(["chmod", "755", patcher_bin], check=True)
+                    except subprocess.CalledProcessError as e:
+                        self.sendVerbose(f"Не удалось исправить права: {e}")
 
                     self.progressRequested.emit(15, "Патчим выбор главы...")
                     
