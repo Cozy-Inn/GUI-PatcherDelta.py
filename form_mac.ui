@@ -124,9 +124,9 @@
      <colorrole role="Highlight">
       <brush brushstyle="SolidPattern">
        <color alpha="255">
-        <red>221</red>
-        <green>214</green>
-        <blue>2</blue>
+        <red>0</red>
+        <green>79</green>
+        <blue>223</blue>
        </color>
       </brush>
      </colorrole>
@@ -291,6 +291,15 @@
         <red>0</red>
         <green>0</green>
         <blue>0</blue>
+       </color>
+      </brush>
+     </colorrole>
+     <colorrole role="Highlight">
+      <brush brushstyle="SolidPattern">
+       <color alpha="255">
+        <red>0</red>
+        <green>79</green>
+        <blue>223</blue>
        </color>
       </brush>
      </colorrole>

@@ -607,10 +607,11 @@ class MainWindow(QMainWindow):
             if sys.platform.startswith("win"):
                 patcher_exe = os.path.join(self.data_root, "bin", "win", "GMS-UTML-Patcher.exe")
                 try:
-                    self.progressRequested.emit(15, "Патчим выбор главы...")
+                    self.progressRequested.emit(0, "Патчим выбор главы...")
                     
                     original_data_sel = os.path.join(State.selected_folder, "data.win")
-                    patch_file_sel = os.path.join(self.patch_folder, "ch_sel", "data.json")
+                    bak_data_sel = os.path.join(State.selected_folder, "data.orig.win")
+                    patch_file_sel = os.path.join(self.patch_folder, "ch_sel", "data.win.json")
                     result_data_sel = os.path.join(self.patch_folder, "data_sel.win")
                     try:
                         subprocess.run([
@@ -647,11 +648,12 @@ class MainWindow(QMainWindow):
                             ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
                         else:
                             raise
-                    self.progressRequested.emit(30, "Выбор главы пропатчен")
+                    self.progressRequested.emit(5, "Выбор главы пропатчен")
 
-                    self.progressRequested.emit(30, "Патчим третью главу...")
+                    self.progressRequested.emit(5, "Патчим третью главу...")
                     original_ch3_data = os.path.join(State.selected_folder, "chapter3_windows", "data.win")
-                    ch3_patch = os.path.join(self.patch_folder, "ch3", "data3.json")
+                    bak_ch3_data = os.path.join(State.selected_folder, "chapter3_windows", "data.orig.win")
+                    ch3_patch = os.path.join(self.patch_folder, "ch3", "data.win.json")
                     result_data_3 = os.path.join(self.patch_folder, "data_3.win")
                     try:
                         subprocess.run([
@@ -690,17 +692,80 @@ class MainWindow(QMainWindow):
                         else:
                             raise
 
-                    self.progressRequested.emit(70, "Третья глава пропатчена")
+                    self.progressRequested.emit(45, "Третья глава пропатчена")
 
-                    self.progressRequested.emit(70, "Копируем файлы...")
-                    src_dir = os.path.join(self.patch_folder, "copy", "chapter3")
-                    dest_dir = os.path.join(State.selected_folder, "chapter3_windows")
+                    self.progressRequested.emit(45, "Патчим четвёртую главу...")
+
+                    original_ch4_data = os.path.join(State.selected_folder, "chapter4_windows", "data.win")
+                    bak_ch4_data = os.path.join(State.selected_folder, "chapter4_windows", "data.orig.win")
+                    ch4_patch = os.path.join(self.patch_folder, "ch4", "data.win.json")
+                    result_data_4 = os.path.join(self.patch_folder, "data_4.win")
+                    try:
+                        subprocess.run([
+                            patcher_exe,
+                            "--data-path", original_ch4_data,
+                            "--patcher-file", ch4_patch,
+                            "--output", result_data_4
+                        ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                    except subprocess.CalledProcessError as e:
+                        if e.returncode in (204, 205, 206):
+                            print(e.returncode)
+                            from threading import Event
+                            event = Event()
+                            user_choice = [None]
+
+                            def callback(result):
+                                user_choice[0] = result
+                                event.set()
+                            self.confirmation_requested.emit(e.returncode, callback)
+
+                            event.wait(180)
+
+                            if not user_choice[0]:
+                                self.progressRequested.emit(0, "Установка отменена")
+                                self.invoke_gui(self.ui.nextBtn_install.clicked.connect, lambda: self.goTo("end_fail"))
+                                self.invoke_gui(self.ui.error.setText, "Отмена пользователем")
+                                self.invoke_gui(self.ui.nextBtn_install.setEnabled, True)
+                                return
+                            subprocess.run([
+                                patcher_exe,
+                                "--data-path", original_ch4_data,
+                                "--patcher-file", ch4_patch,
+                                "--skip-timecheck",
+                                "--output", result_data_4
+                            ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                        else:
+                            raise
+
+                    self.progressRequested.emit(75, "Четвёртая глава пропатчена.")
+                    
+                    self.progressRequested.emit(75, "Копируем файлы...")
+                    ch3_src_dir = os.path.join(self.patch_folder, "copy", "chapter3")
+                    ch3_dest_dir = os.path.join(State.selected_folder, "chapter3_windows")
+                    ch4_src_dir = os.path.join(self.patch_folder, "copy", "chapter4")
+                    ch4_dest_dir = os.path.join(State.selected_folder, "chapter4_windows")
+                    ru_data_file = os.path.join(self.patch_folder, "copy", "ru_data.json")
+                    ru_data_file_dest = os.path.join(State.selected_folder, "ru_data.json")
 
                     copy_config = { "folders": {}, "files": {}}
 
-                    copy_config["folders"][src_dir] = dest_dir
+                    copy_config["folders"][ch3_src_dir] = ch3_dest_dir
+                    copy_config["folders"][ch4_src_dir] = ch4_dest_dir
+
+                    if not os.path.exists(bak_ch3_data):
+                        copy_config["files"][original_ch3_data] = bak_ch3_data
+
+                    if not os.path.exists(bak_ch4_data):
+                        copy_config["files"][original_ch4_data] = bak_ch4_data
+
+                    if not os.path.exists(bak_data_sel):
+                        copy_config["files"][original_data_sel] = bak_data_sel
+
                     copy_config["files"][result_data_3] = original_ch3_data
+                    copy_config["files"][result_data_4] = original_ch4_data
                     copy_config["files"][result_data_sel] = original_data_sel
+                    copy_config["files"][ru_data_file] = ru_data_file_dest
+
 
                     bat_file = copy_game_files_win(
                         copy_config, lambda msg: self.invoke_gui(lambda: self.sendVerbose(msg))
@@ -711,6 +776,7 @@ class MainWindow(QMainWindow):
                     temp_files = [
                         result_data_sel,
                         result_data_3,
+                        result_data_4,
                         bat_file
                     ]
                     for temp_file in temp_files:
@@ -744,10 +810,11 @@ class MainWindow(QMainWindow):
                     except subprocess.CalledProcessError as e:
                         self.sendVerbose(f"Не удалось исправить права: {e}")
 
-                    self.progressRequested.emit(15, "Патчим выбор главы...")
+                    self.progressRequested.emit(0, "Патчим выбор главы...")
                     
                     original_data_sel = os.path.join(State.selected_folder, "game.ios")
-                    patch_file_sel = os.path.join(self.patch_folder, "ch_sel", "data.json")
+                    bak_data_sel = os.path.join(State.selected_folder, "game.orig.ios")
+                    patch_file_sel = os.path.join(self.patch_folder, "ch_sel", "data.mac.json")
                     result_data_sel = os.path.join(self.patch_folder, "game_sel.ios")
                     try:
                         subprocess.run([
@@ -784,11 +851,12 @@ class MainWindow(QMainWindow):
                             ], check=True)
                         else:
                             raise
-                    self.progressRequested.emit(30, "Выбор главы пропатчен")
+                    self.progressRequested.emit(5, "Выбор главы пропатчен")
 
-                    self.progressRequested.emit(30, "Патчим третью главу...")
+                    self.progressRequested.emit(5, "Патчим третью главу...")
                     original_ch3_data = os.path.join(State.selected_folder, "chapter3_mac", "game.ios")
-                    ch3_patch = os.path.join(self.patch_folder, "ch3", "data3.json")
+                    bak_ch3_data = os.path.join(State.selected_folder, "chapter3_mac", "game.orig.ios")
+                    ch3_patch = os.path.join(self.patch_folder, "ch3", "data.mac.json")
                     result_data_3 = os.path.join(self.patch_folder, "game_3.ios")
                     try:
                         subprocess.run([
@@ -826,17 +894,76 @@ class MainWindow(QMainWindow):
                         else:
                             raise
 
-                    self.progressRequested.emit(70, "Третья глава пропатчена")
+                    self.progressRequested.emit(45, "Третья глава пропатчена")
 
-                    self.progressRequested.emit(70, "Копируем файлы...")
-                    src_dir = os.path.join(self.patch_folder, "copy", "chapter3")
-                    dest_dir = os.path.join(State.selected_folder, "chapter3_mac")
+                    self.progressRequested.emit(45, "Патчим четвёртую главу...")
+                    original_ch4_data = os.path.join(State.selected_folder, "chapter4_mac", "game.ios")
+                    bak_ch4_data = os.path.join(State.selected_folder, "chapter4_mac", "game.orig.ios")
+                    ch4_patch = os.path.join(self.patch_folder, "ch4", "data.mac.json")
+                    result_data_4 = os.path.join(self.patch_folder, "game_4.ios")
+                    try:
+                        subprocess.run([
+                            patcher_bin,
+                            "--data-path", original_ch4_data,
+                            "--patcher-file", ch4_patch,
+                            "--output", result_data_4
+                        ], check=True)
+                    except subprocess.CalledProcessError as e:
+                        if e.returncode in (204, 205, 206):
+                            from threading import Event
+                            event = Event()
+                            user_choice = [None]
+
+                            def callback(result):
+                                user_choice[0] = result
+                                event.set()
+                            self.confirmation_requested.emit(e.returncode, callback)
+
+                            event.wait(180)
+
+                            if not user_choice[0]:
+                                self.progressRequested.emit(0, "Установка отменена")
+                                self.invoke_gui(self.ui.nextBtn_install.clicked.connect, lambda: self.goTo("end_fail"))
+                                self.invoke_gui(self.ui.error.setText, "Отмена пользователем")
+                                self.invoke_gui(self.ui.nextBtn_install.setEnabled, True)
+                                return
+                            subprocess.run([
+                                patcher_bin,
+                                "--data-path", original_ch4_data,
+                                "--patcher-file", ch4_patch,
+                                "--skip-timecheck",
+                                "--output", result_data_4
+                            ], check=True)
+                        else:
+                            raise
+                    self.progressRequested.emit(75, "Четвёртая глава пропатчена")
+
+                    self.progressRequested.emit(75, "Копируем файлы...")
+                    ch3_src_dir = os.path.join(self.patch_folder, "copy", "chapter3")
+                    ch3_dest_dir = os.path.join(State.selected_folder, "chapter3_mac")
+                    ch4_src_dir = os.path.join(self.patch_folder, "copy", "chapter4")
+                    ch4_dest_dir = os.path.join(State.selected_folder, "chapter4_mac")
+                    ru_data_file = os.path.join(self.patch_folder, "copy", "ru_data.json")
+                    ru_data_file_dest = os.path.join(State.selected_folder, "ru_data.json")
 
                     copy_config = { "folders": {}, "files": {}}
 
-                    copy_config["folders"][src_dir] = dest_dir
+                    copy_config["folders"][ch3_src_dir] = ch3_dest_dir
+                    copy_config["folders"][ch4_src_dir] = ch4_dest_dir
+
+                    if not os.path.exists(bak_ch3_data):
+                        copy_config["files"][original_ch3_data] = bak_ch3_data
+
+                    if not os.path.exists(bak_ch4_data):
+                        copy_config["files"][original_ch4_data] = bak_ch4_data
+                    
+                    if not os.path.exists(bak_data_sel):
+                        copy_config["files"][original_data_sel] = bak_data_sel
+                    
                     copy_config["files"][result_data_3] = original_ch3_data
+                    copy_config["files"][result_data_4] = original_ch4_data
                     copy_config["files"][result_data_sel] = original_data_sel
+                    copy_config["files"][ru_data_file] = ru_data_file_dest
 
                     copy_game_files_mac(
                         copy_config, 
@@ -847,7 +974,8 @@ class MainWindow(QMainWindow):
 
                     temp_files = [
                         result_data_sel,
-                        result_data_3
+                        result_data_3,
+                        result_data_4
                     ]
                     for temp_file in temp_files:
                         try:
