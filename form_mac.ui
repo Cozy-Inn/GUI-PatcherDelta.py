@@ -1507,7 +1507,7 @@
        </font>
       </property>
       <property name="text">
-       <string>300 Мбайт</string>
+       <string>1 Гбайт</string>
       </property>
      </widget>
      <widget class="QLabel" name="space_available_drop">
@@ -2162,7 +2162,7 @@
        </font>
       </property>
       <property name="text">
-       <string>300 Мбайт</string>
+       <string>1 Гбайт</string>
       </property>
      </widget>
      <widget class="QLabel" name="roflcopyright_path">
