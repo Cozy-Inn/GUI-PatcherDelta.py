@@ -105,9 +105,11 @@ class MainWindow(QMainWindow):
 
         # other stuff
         self.data_root = get_data_root()
-        self.bin_folder = os.path.join(self.data_root, 'bin')
+        self.bin_folder = os.path.join(self.data_root, 'bin') 
         self.patch_folder = os.path.join(self.data_root, 'patch')
-
+        if (sys.platform.startswith("darwin")): 
+            self.patch_folder = os.path.join(self.data_root, '../../Resources/data/patch')
+        
         if sys.platform == "darwin":
             patcher_path = os.path.join(self.bin_folder, "mac", "GMS-UTML-Patcher")
             if os.path.exists(patcher_path):
