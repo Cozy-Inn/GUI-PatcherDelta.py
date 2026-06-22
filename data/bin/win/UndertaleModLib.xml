@@ -672,6 +672,82 @@
         <member name="M:UndertaleModLib.Compiler.CodeFindReplaceOperation.Import(UndertaleModLib.Compiler.CodeImportGroup)">
             <inheritdoc/>
         </member>
+        <member name="F:UndertaleModLib.Decompiler.Assembler.ExtendedIDToName">
+            <summary>
+            Lookup of extended (break) instruction IDs to their mnemonics.
+            </summary>
+        </member>
+        <member name="F:UndertaleModLib.Decompiler.Assembler.NameToExtendedID">
+            <summary>
+            Lookup of extended (break) instruction mnemonics to their IDs.
+            </summary>
+        </member>
+        <member name="M:UndertaleModLib.Decompiler.Assembler.callInstrRegex">
+            <remarks>
+            Pattern:<br/>
+            <code>^(.+)\\(argc=([0-9]+)\\)$</code><br/>
+            Options:<br/>
+            <code>RegexOptions.Compiled</code><br/>
+            Explanation:<br/>
+            <code>
+            ○ Match if at the beginning of the string.<br/>
+            ○ 1st capture group.<br/>
+                ○ Match a character other than '\n' greedily at least once.<br/>
+            ○ Match the string "(argc=".<br/>
+            ○ 2nd capture group.<br/>
+                ○ Match a character in the set [0-9] atomically at least once.<br/>
+            ○ Match ')'.<br/>
+            ○ Match if at the end of the string or if before an ending newline.<br/>
+            </code>
+            </remarks>
+        </member>
+        <member name="M:UndertaleModLib.Decompiler.Assembler.codeEntryRegex">
+            <remarks>
+            Pattern:<br/>
+            <code>^\\(locals=([0-9]+)\\,\\s*argc=([0-9]+)\\)$</code><br/>
+            Options:<br/>
+            <code>RegexOptions.Compiled</code><br/>
+            Explanation:<br/>
+            <code>
+            ○ Match if at the beginning of the string.<br/>
+            ○ Match the string "(locals=".<br/>
+            ○ 1st capture group.<br/>
+                ○ Match a character in the set [0-9] atomically at least once.<br/>
+            ○ Match ','.<br/>
+            ○ Match a whitespace character atomically any number of times.<br/>
+            ○ Match the string "argc=".<br/>
+            ○ 2nd capture group.<br/>
+                ○ Match a character in the set [0-9] atomically at least once.<br/>
+            ○ Match ')'.<br/>
+            ○ Match if at the end of the string or if before an ending newline.<br/>
+            </code>
+            </remarks>
+        </member>
+        <member name="M:UndertaleModLib.Decompiler.Assembler.AssembleOne(System.String,UndertaleModLib.UndertaleData,System.Collections.Generic.Dictionary{System.String,UndertaleModLib.Models.UndertaleVariable})">
+            <summary>
+            Assembles a single <see cref="T:UndertaleModLib.Models.UndertaleInstruction"/>, with the provided data, and possibly local variables. Labels are not allowed.
+            </summary>
+        </member>
+        <member name="M:UndertaleModLib.Decompiler.Assembler.AssembleOne(System.String,UndertaleModLib.UndertaleData,System.Collections.Generic.Dictionary{System.String,UndertaleModLib.Models.UndertaleVariable},System.String@)">
+            <summary>
+            Assembles a single <see cref="T:UndertaleModLib.Models.UndertaleInstruction"/>, with the provided data, and possibly local variables. Labels are not allowed.
+            </summary>
+        </member>
+        <member name="M:UndertaleModLib.Decompiler.Assembler.ParseResourceName(System.String,UndertaleModLib.UndertaleData)">
+            <summary>
+            Parses a resource name, using the given data.
+            </summary>
+        </member>
+        <member name="M:UndertaleModLib.Decompiler.Assembler.Assemble(System.String,UndertaleModLib.UndertaleData)">
+            <summary>
+            Assembles many instructions, separated by newlines, using the provided data.
+            </summary>
+        </member>
+        <member name="M:UndertaleModLib.Decompiler.Assembler.ParseStringReference(System.String,System.Collections.Generic.IList{UndertaleModLib.Models.UndertaleString})">
+            <summary>
+            Parses a string reference in assembly, using the given string list (may create new strings).
+            </summary>
+        </member>
         <member name="T:UndertaleModLib.Decompiler.GameSpecificResolver">
             <summary>
             Class that helps load game-specific data, which tailor some features (such as the decompiler) to specific games.
@@ -803,17 +879,17 @@
         </member>
         <member name="T:UndertaleModLib.Models.UndertaleAnimationCurve.GraphTypeEnum">
             <summary>
-            TODO: unknown
+            Unused enum: The curve type is set per channel unlike in GMS2 where it is set per animation curve
             </summary>
         </member>
-        <member name="F:UndertaleModLib.Models.UndertaleAnimationCurve.GraphTypeEnum.Unknown0">
+        <member name="F:UndertaleModLib.Models.UndertaleAnimationCurve.GraphTypeEnum.Bezier">
             <summary>
-            Unknown
+            Value is never set by the compiler
             </summary>
         </member>
-        <member name="F:UndertaleModLib.Models.UndertaleAnimationCurve.GraphTypeEnum.Unknown1">
+        <member name="F:UndertaleModLib.Models.UndertaleAnimationCurve.GraphTypeEnum.Graph">
             <summary>
-            Unknown
+            Value is always set by the compiler
             </summary>
         </member>
         <member name="P:UndertaleModLib.Models.UndertaleAnimationCurve.Name">
@@ -885,6 +961,11 @@
             Creates a smooth progression between points using catmull-rom interpolation.
             </summary>
         </member>
+        <member name="F:UndertaleModLib.Models.UndertaleAnimationCurve.Channel.CurveType.Bezier">
+            <summary>
+            Creates a curved progression by using points as the control points of a 2D Bézier curve.
+            </summary>
+        </member>
         <member name="P:UndertaleModLib.Models.UndertaleAnimationCurve.Channel.Name">
             <inheritdoc />
         </member>
@@ -895,7 +976,7 @@
         </member>
         <member name="P:UndertaleModLib.Models.UndertaleAnimationCurve.Channel.Iterations">
             <summary>
-            TODO: document this
+            The amount of resolution generated between control points in both Catmull-Rom (smooth) and Bezier interpolation.
             </summary>
         </member>
         <member name="P:UndertaleModLib.Models.UndertaleAnimationCurve.Channel.Points">
@@ -1086,9 +1167,10 @@
             The amount of tiles this tileset has.
             </summary>
         </member>
-        <member name="P:UndertaleModLib.Models.UndertaleBackground.GMS2UnknownAlwaysZero">
+        <member name="P:UndertaleModLib.Models.UndertaleBackground.GMS2ExportedSpriteIndex">
             <summary>
-            TODO: Functionality currently unknown. Game Maker Studio 2 only.
+            Exported sprite index, if the background's corresponding sprite was marked to still be exported.
+            Will be either 0 or -1 (depending on GM version) when the sprite is not exported, which makes this a bit ambiguous.
             </summary>
         </member>
         <member name="P:UndertaleModLib.Models.UndertaleBackground.GMS2FrameLength">
@@ -1100,6 +1182,16 @@
             <summary>
             All tile ids of this tileset. Game Maker Studio 2 only.
             </summary>
+        </member>
+        <member name="P:UndertaleModLib.Models.UndertaleBackground.GMS2TileSeparationX">
+            <remarks>
+            GM 2024.14.1+ only.
+            </remarks>
+        </member>
+        <member name="P:UndertaleModLib.Models.UndertaleBackground.GMS2TileSeparationY">
+            <remarks>
+            GM 2024.14.1+ only.
+            </remarks>
         </member>
         <member name="M:UndertaleModLib.Models.UndertaleBackground.Serialize(UndertaleModLib.UndertaleWriter)">
             <inheritdoc />
@@ -1145,6 +1237,21 @@
             <summary>
             Converts from modern instruction opcodes to bytecode 14 opcodes.
             </summary>
+        </member>
+        <member name="F:UndertaleModLib.Models.UndertaleInstruction.InstanceType.Undefined">
+            Note: This is just object 0, but also occurs in places where no instance type was set
+        </member>
+        <member name="F:UndertaleModLib.Models.UndertaleInstruction.InstanceType.Builtin">
+            Note: Used only in UndertaleVariable.VarID (which is not really even InstanceType)
+        </member>
+        <member name="F:UndertaleModLib.Models.UndertaleInstruction.VariableType.Instance">
+            The InstanceType is an Instance ID inside a room, minus 100000
+        </member>
+        <member name="F:UndertaleModLib.Models.UndertaleInstruction.VariableType.ArrayPushAF">
+            GMS2.3+, multidimensional array with pushaf
+        </member>
+        <member name="F:UndertaleModLib.Models.UndertaleInstruction.VariableType.ArrayPopAF">
+            GMS2.3+, multidimensional array with pushaf or popaf
         </member>
         <member name="T:UndertaleModLib.Models.UndertaleInstruction.IReferencedObject">
             <summary>
@@ -1533,6 +1640,11 @@
             </summary>
             <returns>The texture data of the external texture or a placeholder texture if it can't be loaded.</returns>
         </member>
+        <member name="M:UndertaleModLib.Models.UndertaleEmbeddedTexture.GetTextureBlockSize">
+            <summary>
+            Returns the parsed texture block size, or 0 if none is available, e.g. on older GM versions.
+            </summary>
+        </member>
         <member name="M:UndertaleModLib.Models.UndertaleEmbeddedTexture.ToString">
             <inheritdoc />
         </member>
@@ -1616,7 +1728,7 @@
             <param name="maxEndOfStreamPosition">Upper bound on the end of the texture's image data (e.g., for padding).</param>
             <param name="gm2022_5">Whether to unserialize the image data using GameMaker 2022.5+ format.</param>
         </member>
-        <member name="M:UndertaleModLib.Models.UndertaleEmbeddedTexture.TexData.SetMaxEndOfStreamPosition(System.Int32)">
+        <member name="M:UndertaleModLib.Models.UndertaleEmbeddedTexture.TexData.SetMaxEndOfStreamPosition(System.Int64)">
             <summary>
             Sets the upper bound on the position of the end of the image stream, for use when loading a full data file.
             </summary>
@@ -3938,7 +4050,12 @@
         </member>
         <member name="F:UndertaleModLib.Models.UndertaleGeneralInfo.InfoFlags.SteamEnabled">
             <summary>
-            Whether Steam is enabled.
+            Whether Steam (or the YoYoPlayer) is enabled.
+            </summary>
+        </member>
+        <member name="F:UndertaleModLib.Models.UndertaleGeneralInfo.InfoFlags.UseAppDataSaveLocation">
+            <summary>
+            When enabled, the game will write save data to %appdata%\GameName, otherwise it will write to %localappdata%\GameName
             </summary>
         </member>
         <member name="F:UndertaleModLib.Models.UndertaleGeneralInfo.InfoFlags.BorderlessWindow">
@@ -3949,6 +4066,21 @@
         <member name="F:UndertaleModLib.Models.UndertaleGeneralInfo.InfoFlags.JavaScriptMode">
             <summary>
             Tells the runner to run Javascript code
+            </summary>
+        </member>
+        <member name="F:UndertaleModLib.Models.UndertaleGeneralInfo.InfoFlags.GameRunFromGMS2IDE">
+            <summary>
+            This flag is set when a game is launched from the Gamemaker Studio 2 IDE using the 'Run' or 'Debug' options
+            </summary>
+        </member>
+        <member name="F:UndertaleModLib.Models.UndertaleGeneralInfo.InfoFlags.TransparentBackground">
+            <summary>
+            For the GX.games runner, allows the browser canvas to be transparent where nothing is drawn.
+            </summary>
+        </member>
+        <member name="F:UndertaleModLib.Models.UndertaleGeneralInfo.InfoFlags.WindowsD3DSwapEffectDiscard">
+            <summary>
+            For the Windows runner, reverts the swapchain to an older/legacy swap effect.
             </summary>
         </member>
         <member name="T:UndertaleModLib.Models.UndertaleGeneralInfo.FunctionClassification">
@@ -3966,9 +4098,9 @@
             The bytecode version of the data file.
             </summary>
         </member>
-        <member name="P:UndertaleModLib.Models.UndertaleGeneralInfo.Unknown">
+        <member name="P:UndertaleModLib.Models.UndertaleGeneralInfo.Padding">
             <summary>
-            TODO: currently unknown value.
+            Likely padding, IsDebuggerDisabled and BytecodeVersion are written together as a 32-bit integer
             </summary>
         </member>
         <member name="P:UndertaleModLib.Models.UndertaleGeneralInfo.FileName">
@@ -4189,14 +4321,14 @@
             If the resolution can be changed.
             </summary>
         </member>
-        <member name="P:UndertaleModLib.Models.UndertaleOptions.Unknown1">
+        <member name="P:UndertaleModLib.Models.UndertaleOptions.ShaderExtensionFlag">
             <summary>
-            TODO: unknown value, needs research. Tends to be 2^31?
+            Shader extension flag. Always set to int.MinValue
             </summary>
         </member>
-        <member name="P:UndertaleModLib.Models.UndertaleOptions.Unknown2">
+        <member name="P:UndertaleModLib.Models.UndertaleOptions.ShaderExtensionVersion">
             <summary>
-            TODO: another unknown value, also needs research.
+            Shader extension version. Always set to 2
             </summary>
         </member>
         <member name="P:UndertaleModLib.Models.UndertaleOptions.Info">
@@ -4470,9 +4602,9 @@
             Whether the room has Views enabled.
             </summary>
         </member>
-        <member name="F:UndertaleModLib.Models.UndertaleRoom.RoomEntryFlags.ShowColor">
+        <member name="F:UndertaleModLib.Models.UndertaleRoom.RoomEntryFlags.ClearViewBackground">
             <summary>
-            TODO not exactly sure, probably similar to <see cref="P:UndertaleModLib.Models.UndertaleRoom.DrawBackgroundColor"/>?
+            Clears the application surface with the window colour before drawing each frame.
             </summary>
         </member>
         <member name="F:UndertaleModLib.Models.UndertaleRoom.RoomEntryFlags.DoNotClearDisplayBuffer">
@@ -5428,9 +5560,6 @@
         <member name="M:UndertaleModLib.Models.UndertaleRoom.SequenceInstance.Dispose">
             <inheritdoc/>
         </member>
-        <member name="F:UndertaleModLib.Models.UndertaleRoom.ParticleSystemInstance.ChildObjectsSize">
-            <inheritdoc cref="F:UndertaleModLib.IStaticChildObjectsSize.ChildObjectsSize" />
-        </member>
         <member name="P:UndertaleModLib.Models.UndertaleRoom.ParticleSystemInstance.OppositeRotation">
             <summary>
             The opposite angle of the current rotation.
@@ -5445,6 +5574,9 @@
         <member name="M:UndertaleModLib.Models.UndertaleRoom.ParticleSystemInstance.Unserialize(UndertaleModLib.UndertaleReader)">
             <inheritdoc />
         </member>
+        <member name="M:UndertaleModLib.Models.UndertaleRoom.ParticleSystemInstance.UnserializeChildObjectCount(UndertaleModLib.UndertaleReader)">
+            <inheritdoc cref="M:UndertaleModLib.UndertaleObject.UnserializeChildObjectCount(UndertaleModLib.UndertaleReader)"/>
+        </member>
         <member name="M:UndertaleModLib.Models.UndertaleRoom.ParticleSystemInstance.GenerateRandomName(UndertaleModLib.UndertaleData)">
             <summary>
             Generates a random name for this instance, as a utility for room editing.
@@ -5456,14 +5588,14 @@
         <member name="M:UndertaleModLib.Models.UndertaleRoom.ParticleSystemInstance.Dispose">
             <inheritdoc/>
         </member>
-        <member name="F:UndertaleModLib.Models.UndertaleRoom.TextItemInstance.ChildObjectsSize">
-            <inheritdoc cref="F:UndertaleModLib.IStaticChildObjectsSize.ChildObjectsSize" />
-        </member>
         <member name="M:UndertaleModLib.Models.UndertaleRoom.TextItemInstance.Serialize(UndertaleModLib.UndertaleWriter)">
             <inheritdoc />
         </member>
         <member name="M:UndertaleModLib.Models.UndertaleRoom.TextItemInstance.Unserialize(UndertaleModLib.UndertaleReader)">
             <inheritdoc />
+        </member>
+        <member name="M:UndertaleModLib.Models.UndertaleRoom.TextItemInstance.UnserializeChildObjectCount(UndertaleModLib.UndertaleReader)">
+            <inheritdoc cref="M:UndertaleModLib.UndertaleObject.UnserializeChildObjectCount(UndertaleModLib.UndertaleReader)"/>
         </member>
         <member name="M:UndertaleModLib.Models.UndertaleRoom.TextItemInstance.GenerateRandomName(UndertaleModLib.UndertaleData)">
             <summary>
@@ -6088,9 +6220,6 @@
             Text keyframe data, containing various text display properties.
             </summary>
         </member>
-        <member name="F:UndertaleModLib.Models.UndertaleSequence.TextKeyframes.Data.ChildObjectsSize">
-            <inheritdoc cref="F:UndertaleModLib.IStaticChildObjectsSize.ChildObjectsSize" />
-        </member>
         <member name="P:UndertaleModLib.Models.UndertaleSequence.TextKeyframes.Data.Text">
             <summary>
             Text to be displayed.
@@ -6121,6 +6250,9 @@
         </member>
         <member name="M:UndertaleModLib.Models.UndertaleSequence.TextKeyframes.Data.Unserialize(UndertaleModLib.UndertaleReader)">
             <inheritdoc />
+        </member>
+        <member name="M:UndertaleModLib.Models.UndertaleSequence.TextKeyframes.Data.UnserializeChildObjectCount(UndertaleModLib.UndertaleReader)">
+            <inheritdoc cref="M:UndertaleModLib.UndertaleObject.UnserializeChildObjectCount(UndertaleModLib.UndertaleReader)"/>
         </member>
         <member name="T:UndertaleModLib.Models.UndertaleSequence.ParticleKeyframes">
             <summary>
@@ -8669,6 +8801,14 @@
             Whether the data file has array copy-on-write enabled.
             </summary>
         </member>
+        <member name="P:UndertaleModLib.UndertaleData.LastParticleSystemInstanceID">
+            <summary>
+            The last room particle system instance ID of the data file (incrementing).
+            </summary>
+            <remarks>
+            The first actual usable ID is 8388608.
+            </remarks>
+        </member>
         <member name="F:UndertaleModLib.UndertaleData.ToolInfo">
             <summary>
             Some info for the editor to store data on.
@@ -8708,19 +8848,36 @@
             <summary>
             Get a resource from the data file by name.
             </summary>
+            <remarks>
+            This does a linear search, and will thus be slow if used many times. It's recommended to build lookup maps if many searches are required.
+            </remarks>
             <param name="name">The name of the desired resource.</param>
             <param name="ignoreCase">Whether to ignore casing while searching.</param>
-            <returns>The <see cref="T:UndertaleModLib.UndertaleResource"/>.</returns>
+            <returns>The <see cref="T:UndertaleModLib.UndertaleNamedResource"/>.</returns>
         </member>
         <member name="M:UndertaleModLib.UndertaleData.IndexOf(UndertaleModLib.UndertaleResource,System.Boolean)">
             <summary>
-            Reports the zero-based index of the first occurrence of the specified <see cref="T:UndertaleModLib.UndertaleResource"/>.
+            Returns the zero-based index of the first occurrence of the specified <see cref="T:UndertaleModLib.UndertaleResource"/>.
             </summary>
+            <remarks>
+            This does a linear search, and will thus be slow if used many times. It's recommended to build lookup maps if many searches are required.
+            </remarks>
             <param name="obj">The object to get the index of.</param>
             <param name="panicIfInvalid">Whether to throw if <paramref name="obj"/> is not a valid object.</param>
-            <returns>The zero-based index position of the <paramref name="obj"/> parameter if it is found or -2 if it is not.</returns>
+            <returns>The zero-based index position of the <paramref name="obj"/> parameter if it is found, or -1 if it is not found.</returns>
             <exception cref="T:System.InvalidOperationException"><paramref name="panicIfInvalid"/> is <see langword="true"/>
             and <paramref name="obj"/> could not be found.</exception>
+        </member>
+        <member name="M:UndertaleModLib.UndertaleData.IndexOfByName(System.String,System.Boolean)">
+            <summary>
+            Returns the zero-based index of the first occurrence of the specified <see cref="T:UndertaleModLib.UndertaleNamedResource"/>.
+            </summary>
+            <remarks>
+            This does a linear search, and will thus be slow if used many times. It's recommended to build lookup maps if many searches are required.
+            </remarks>
+            <param name="name">The name of the desired resource.</param>
+            <param name="ignoreCase">Whether to ignore casing while searching.</param>
+            <returns>The zero-based index position of the <see cref="T:UndertaleModLib.UndertaleNamedResource"/> if it is found, or -1 if it is not found.</returns>
         </member>
         <member name="M:UndertaleModLib.UndertaleData.IsGameMaker2">
             <summary>
@@ -9143,6 +9300,19 @@
             BZip2 compression applied on top of GameMaker's custom variant of the QOI image file format.
             </summary>
         </member>
+        <member name="F:UndertaleModLib.Util.GMImage.ImageFormat.Dds">
+            <summary>
+            DDS file format.
+            </summary>
+        </member>
+        <member name="F:UndertaleModLib.Util.GMImage.ImageFormat.Unknown">
+            <summary>
+            Unknown or unsupported file format. Will be represented by raw bytes, including any padding.
+            </summary>
+            <remarks>
+            This format cannot be converted to any other format (nor displayed), but can be saved/loaded.
+            </remarks>
+        </member>
         <member name="P:UndertaleModLib.Util.GMImage.Format">
             <summary>
             Format of this image.
@@ -9181,6 +9351,11 @@
         <member name="P:UndertaleModLib.Util.GMImage.MagicBz2Footer">
             <summary>
             Magic value found near the end of a BZip2 stream (square root of pi). 
+            </summary>
+        </member>
+        <member name="P:UndertaleModLib.Util.GMImage.MagicDds">
+            <summary>
+            DDS file format magic.
             </summary>
         </member>
         <member name="F:UndertaleModLib.Util.GMImage._data">
@@ -9255,6 +9430,18 @@
             </summary>
             <exception cref="T:System.IO.InvalidDataException">Invalid QOI data, or image is too large</exception>
         </member>
+        <member name="M:UndertaleModLib.Util.GMImage.FromDds(System.Byte[])">
+            <summary>
+            Creates a <see cref="T:UndertaleModLib.Util.GMImage"/> of DDS format, wrapping around the provided byte array containing DDS data.
+            </summary>
+            <param name="data">Byte array of DDS data.</param>
+        </member>
+        <member name="M:UndertaleModLib.Util.GMImage.FromUnknown(System.Byte[])">
+            <summary>
+            Creates a <see cref="T:UndertaleModLib.Util.GMImage"/> of unknown format, wrapping around the provided byte array containing unknown format data.
+            </summary>
+            <param name="data">Byte array of unknown format data.</param>
+        </member>
         <member name="M:UndertaleModLib.Util.GMImage.SavePng(System.IO.Stream)">
             <summary>
             Saves this image as a PNG file, writing the data to the provided <see cref="T:System.IO.Stream"/>.
@@ -9294,6 +9481,13 @@
             </summary>
             <param name="sharedStream">Shared <see cref="T:System.IO.MemoryStream"/> to be reused for BZ2 compression, if required.</param>
         </member>
+        <member name="M:UndertaleModLib.Util.GMImage.ConvertToDds">
+            <summary>
+            Same as <see cref="M:UndertaleModLib.Util.GMImage.ConvertToPng"/>.
+            </summary>
+            <remarks>This is supposed to return the image converted to <see cref="F:UndertaleModLib.Util.GMImage.ImageFormat.Dds"/> format, but that's not implemented yet.</remarks>
+            <returns></returns>
+        </member>
         <member name="M:UndertaleModLib.Util.GMImage.GetRawImageData">
             <summary>
             Returns the raw BGRA32 pixel data of this image, which can be modified.
@@ -9320,7 +9514,7 @@
         </member>
         <member name="M:UndertaleModLib.Util.GMImage.GetMagickImage">
             <summary>
-            Returns a new <see cref="T:ImageMagick.MagickImage"/> with the contents of this image.
+            Returns a new <see cref="T:ImageMagick.MagickImage"/> with the contents of this image, if not <see cref="F:UndertaleModLib.Util.GMImage.ImageFormat.Unknown"/> format.
             </summary>
         </member>
         <member name="M:UndertaleModLib.Util.GMImage.FromMagickImage(ImageMagick.IMagickImage{System.Byte})">
@@ -9589,6 +9783,79 @@
         </member>
         <member name="M:UndertaleModLib.Util.TextureWorker.Dispose">
             <inheritdoc/>
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.callInstrRegex_0">
+            <summary>Custom <see cref="T:System.Text.RegularExpressions.Regex"/>-derived type for the callInstrRegex method.</summary>
+        </member>
+        <member name="F:System.Text.RegularExpressions.Generated.callInstrRegex_0.Instance">
+            <summary>Cached, thread-safe singleton instance.</summary>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.callInstrRegex_0.#ctor">
+            <summary>Initializes the instance.</summary>
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.callInstrRegex_0.RunnerFactory">
+            <summary>Provides a factory for creating <see cref="T:System.Text.RegularExpressions.RegexRunner"/> instances to be used by methods on <see cref="T:System.Text.RegularExpressions.Regex"/>.</summary>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.callInstrRegex_0.RunnerFactory.CreateInstance">
+            <summary>Creates an instance of a <see cref="T:System.Text.RegularExpressions.RegexRunner"/> used by methods on <see cref="T:System.Text.RegularExpressions.Regex"/>.</summary>
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.callInstrRegex_0.RunnerFactory.Runner">
+            <summary>Provides the runner that contains the custom logic implementing the specified regular expression.</summary>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.callInstrRegex_0.RunnerFactory.Runner.Scan(System.ReadOnlySpan{System.Char})">
+            <summary>Scan the <paramref name="inputSpan"/> starting from base.runtextstart for the next match.</summary>
+            <param name="inputSpan">The text being scanned by the regular expression.</param>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.callInstrRegex_0.RunnerFactory.Runner.TryFindNextPossibleStartingPosition(System.ReadOnlySpan{System.Char})">
+            <summary>Search <paramref name="inputSpan"/> starting from base.runtextpos for the next location a match could possibly start.</summary>
+            <param name="inputSpan">The text being scanned by the regular expression.</param>
+            <returns>true if a possible match was found; false if no more matches are possible.</returns>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.callInstrRegex_0.RunnerFactory.Runner.TryMatchAtCurrentPosition(System.ReadOnlySpan{System.Char})">
+            <summary>Determine whether <paramref name="inputSpan"/> at base.runtextpos is a match for the regular expression.</summary>
+            <param name="inputSpan">The text being scanned by the regular expression.</param>
+            <returns>true if the regular expression matches at the current position; otherwise, false.</returns>
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.codeEntryRegex_1">
+            <summary>Custom <see cref="T:System.Text.RegularExpressions.Regex"/>-derived type for the codeEntryRegex method.</summary>
+        </member>
+        <member name="F:System.Text.RegularExpressions.Generated.codeEntryRegex_1.Instance">
+            <summary>Cached, thread-safe singleton instance.</summary>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.codeEntryRegex_1.#ctor">
+            <summary>Initializes the instance.</summary>
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.codeEntryRegex_1.RunnerFactory">
+            <summary>Provides a factory for creating <see cref="T:System.Text.RegularExpressions.RegexRunner"/> instances to be used by methods on <see cref="T:System.Text.RegularExpressions.Regex"/>.</summary>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.codeEntryRegex_1.RunnerFactory.CreateInstance">
+            <summary>Creates an instance of a <see cref="T:System.Text.RegularExpressions.RegexRunner"/> used by methods on <see cref="T:System.Text.RegularExpressions.Regex"/>.</summary>
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.codeEntryRegex_1.RunnerFactory.Runner">
+            <summary>Provides the runner that contains the custom logic implementing the specified regular expression.</summary>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.codeEntryRegex_1.RunnerFactory.Runner.Scan(System.ReadOnlySpan{System.Char})">
+            <summary>Scan the <paramref name="inputSpan"/> starting from base.runtextstart for the next match.</summary>
+            <param name="inputSpan">The text being scanned by the regular expression.</param>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.codeEntryRegex_1.RunnerFactory.Runner.TryFindNextPossibleStartingPosition(System.ReadOnlySpan{System.Char})">
+            <summary>Search <paramref name="inputSpan"/> starting from base.runtextpos for the next location a match could possibly start.</summary>
+            <param name="inputSpan">The text being scanned by the regular expression.</param>
+            <returns>true if a possible match was found; false if no more matches are possible.</returns>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.codeEntryRegex_1.RunnerFactory.Runner.TryMatchAtCurrentPosition(System.ReadOnlySpan{System.Char})">
+            <summary>Determine whether <paramref name="inputSpan"/> at base.runtextpos is a match for the regular expression.</summary>
+            <param name="inputSpan">The text being scanned by the regular expression.</param>
+            <returns>true if the regular expression matches at the current position; otherwise, false.</returns>
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.Utilities">
+            <summary>Helper methods used by generated <see cref="T:System.Text.RegularExpressions.Regex"/>-derived implementations.</summary>
+        </member>
+        <member name="F:System.Text.RegularExpressions.Generated.Utilities.s_defaultTimeout">
+            <summary>Default timeout value set in <see cref="T:System.AppContext"/>, or <see cref="F:System.Text.RegularExpressions.Regex.InfiniteMatchTimeout"/> if none was set.</summary>
+        </member>
+        <member name="F:System.Text.RegularExpressions.Generated.Utilities.s_hasTimeout">
+            <summary>Whether <see cref="F:System.Text.RegularExpressions.Generated.Utilities.s_defaultTimeout"/> is non-infinite.</summary>
         </member>
     </members>
 </doc>

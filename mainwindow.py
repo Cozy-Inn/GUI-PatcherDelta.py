@@ -650,9 +650,53 @@ class MainWindow(QMainWindow):
                             ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
                         else:
                             raise
-                    self.progressRequested.emit(5, "Выбор главы пропатчен")
+                    self.progressRequested.emit(10, "Выбор главы пропатчен")
 
-                    self.progressRequested.emit(5, "Патчим третью главу...")
+                    self.progressRequested.emit(10, "Патчим первую главу...")
+                    original_ch1_data = os.path.join(State.selected_folder, "chapter1_windows", "data.win")
+                    bak_ch1_data = os.path.join(State.selected_folder, "chapter1_windows", "data.orig.win")
+                    ch1_patch = os.path.join(self.patch_folder, "ch1", "data.win.json")
+                    result_data_1 = os.path.join(self.patch_folder, "data_1.win")
+                    try:
+                        subprocess.run([
+                            patcher_exe,
+                            "--data-path", original_ch1_data,
+                            "--patcher-file", ch1_patch,
+                            "--output", result_data_1
+                        ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                    except subprocess.CalledProcessError as e:
+                        if e.returncode in (204, 205, 206):
+                            print(e.returncode)
+                            from threading import Event
+                            event = Event()
+                            user_choice = [None]
+
+                            def callback(result):
+                                user_choice[0] = result
+                                event.set()
+                            self.confirmation_requested.emit(e.returncode, callback)
+
+                            event.wait(180)
+
+                            if not user_choice[0]:
+                                self.progressRequested.emit(0, "Установка отменена")
+                                self.invoke_gui(self.ui.nextBtn_install.clicked.connect, lambda: self.goTo("end_fail"))
+                                self.invoke_gui(self.ui.error.setText, "Отмена пользователем")
+                                self.invoke_gui(self.ui.nextBtn_install.setEnabled, True)
+                                return
+                            subprocess.run([
+                                patcher_exe,
+                                "--data-path", original_ch1_data,
+                                "--patcher-file", ch1_patch,
+                                "--skip-timecheck",
+                                "--output", result_data_1
+                            ], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                        else:
+                            raise
+
+                    self.progressRequested.emit(30, "Первая глава пропатчена")
+
+                    self.progressRequested.emit(30, "Патчим третью главу...")
                     original_ch3_data = os.path.join(State.selected_folder, "chapter3_windows", "data.win")
                     bak_ch3_data = os.path.join(State.selected_folder, "chapter3_windows", "data.orig.win")
                     ch3_patch = os.path.join(self.patch_folder, "ch3", "data.win.json")
@@ -694,9 +738,9 @@ class MainWindow(QMainWindow):
                         else:
                             raise
 
-                    self.progressRequested.emit(45, "Третья глава пропатчена")
+                    self.progressRequested.emit(50, "Третья глава пропатчена")
 
-                    self.progressRequested.emit(45, "Патчим четвёртую главу...")
+                    self.progressRequested.emit(50, "Патчим четвёртую главу...")
 
                     original_ch4_data = os.path.join(State.selected_folder, "chapter4_windows", "data.win")
                     bak_ch4_data = os.path.join(State.selected_folder, "chapter4_windows", "data.orig.win")
@@ -739,9 +783,11 @@ class MainWindow(QMainWindow):
                         else:
                             raise
 
-                    self.progressRequested.emit(75, "Четвёртая глава пропатчена.")
+                    self.progressRequested.emit(70, "Четвёртая глава пропатчена.")
                     
-                    self.progressRequested.emit(75, "Копируем файлы...")
+                    self.progressRequested.emit(70, "Копируем файлы...")
+                    ch1_src_dir = os.path.join(self.patch_folder, "copy", "chapter1")
+                    ch1_dest_dir = os.path.join(State.selected_folder, "chapter1_windows")
                     ch3_src_dir = os.path.join(self.patch_folder, "copy", "chapter3")
                     ch3_dest_dir = os.path.join(State.selected_folder, "chapter3_windows")
                     ch4_src_dir = os.path.join(self.patch_folder, "copy", "chapter4")
@@ -751,8 +797,12 @@ class MainWindow(QMainWindow):
 
                     copy_config = { "folders": {}, "files": {}}
 
+                    copy_config["folders"][ch1_src_dir] = ch1_dest_dir
                     copy_config["folders"][ch3_src_dir] = ch3_dest_dir
                     copy_config["folders"][ch4_src_dir] = ch4_dest_dir
+
+                    if not os.path.exists(bak_ch1_data):
+                        copy_config["files"][original_ch1_data] = bak_ch1_data
 
                     if not os.path.exists(bak_ch3_data):
                         copy_config["files"][original_ch3_data] = bak_ch3_data
@@ -763,6 +813,7 @@ class MainWindow(QMainWindow):
                     if not os.path.exists(bak_data_sel):
                         copy_config["files"][original_data_sel] = bak_data_sel
 
+                    copy_config["files"][result_data_1] = original_ch1_data
                     copy_config["files"][result_data_3] = original_ch3_data
                     copy_config["files"][result_data_4] = original_ch4_data
                     copy_config["files"][result_data_sel] = original_data_sel
@@ -773,10 +824,11 @@ class MainWindow(QMainWindow):
                         copy_config, lambda msg: self.invoke_gui(lambda: self.sendVerbose(msg))
                     )
 
-                    self.progressRequested.emit(95, "Удаляем временные файлы...")
+                    self.progressRequested.emit(90, "Удаляем временные файлы...")
 
                     temp_files = [
                         result_data_sel,
+                        result_data_1,
                         result_data_3,
                         result_data_4,
                         bat_file

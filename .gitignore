@@ -22,7 +22,6 @@ env/
 *.log
 *.toc
 *.manifest
-*.dll
 *.so
 *.dylib
 
@@ -33,7 +32,6 @@ ui_*.py
 *.qm
 *.moc
 *.obj
-*.pdb
 
 # IDE specific
 .idea/
@@ -55,7 +53,6 @@ Thumbs.db
 *.db
 
 # PyInstaller output (single executable)
-*.exe
 *.app
 *.bin
 

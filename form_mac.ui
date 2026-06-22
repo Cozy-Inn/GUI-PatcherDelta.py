@@ -125,8 +125,8 @@
       <brush brushstyle="SolidPattern">
        <color alpha="255">
         <red>0</red>
-        <green>79</green>
-        <blue>223</blue>
+        <green>223</green>
+        <blue>200</blue>
        </color>
       </brush>
      </colorrole>
@@ -298,8 +298,8 @@
       <brush brushstyle="SolidPattern">
        <color alpha="255">
         <red>0</red>
-        <green>79</green>
-        <blue>223</blue>
+        <green>223</green>
+        <blue>200</blue>
        </color>
       </brush>
      </colorrole>
@@ -539,7 +539,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>5</number>
+     <number>4</number>
     </property>
     <widget class="QWidget" name="intro">
      <widget class="QPushButton" name="nextBtn_intro">
