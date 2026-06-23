@@ -1507,7 +1507,7 @@
        </font>
       </property>
       <property name="text">
-       <string>1 Гбайт</string>
+       <string>1024 МБайт</string>
       </property>
      </widget>
      <widget class="QLabel" name="space_available_drop">
